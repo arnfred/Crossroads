@@ -17,9 +17,9 @@ def getTEMPgraph(n) :
 	nodes  = [{ 'index' : i } for i in range(n)]
 	return json.dumps({
 		'nodes' : nodes,
-		'links' : map(lambda n : { 
-			'target' : n['index'], 
-			'source' : random.randint(0,100), 
-			'value' : random.randint(0,100)
-		}, nodes)
+		'links' : map(lambda i : { 
+			'target' : i, 
+			'source' : random.randint(0,99), 
+			'value' : random.randint(0,99)
+		}, range(n))
 	}, indent=4)

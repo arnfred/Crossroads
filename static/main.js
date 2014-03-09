@@ -1,15 +1,3 @@
-var graph = function () {
-	var nodes = d3.range(100).map(function (i) { return { index: i } });
-	var links = nodes.map(function (i,n) { 
-		return { 
-			target: i, 
-			source: Math.floor(Math.random()*100),
-			value: Math.floor(Math.random()*100)
-		} 
-	})
-	return { nodes : nodes, links : links }
-}()
-
 var width = 960,
     height = 500
 
@@ -27,12 +15,19 @@ var force = d3.layout.force()
 
 // Add data to graph
 var start = function(id) {
+
+	if (id == undefined) {
+		id = ""
+	}
 	// Stop and clear existing force layout
 	svg.selectAll(".link").remove()
 	svg.selectAll(".node").remove()
 
 	// Load data and start force layout
-	d3.json("/d/" + id, function(error, json) {
+	d3.json("/d/" + id, function(error, graph) {
+
+		console.debug(error)
+		console.debug(graph)
 
 		force
 			.nodes(graph.nodes)
