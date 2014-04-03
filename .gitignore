@@ -1,0 +1,8 @@
+# Byte-compiled / optimized / DLL files
+*.py[cod]
+
+# Mac OS X file
+.DS_Store
+
+# Database files
+*.db
