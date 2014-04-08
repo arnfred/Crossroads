@@ -311,7 +311,7 @@ class mystdout(object):
 	verbose = False
 
 	@staticmethod
-	def write(string, progress=0, progress_max=1, show_percentage=True, show_progress=True, show_time=True, progress_len=35, message_len=60, ln=False):
+	def write(string, progress=0, progress_max=1, show_percentage=True, show_progress=True, show_time=True, progress_len=35, message_len=70, ln=False):
 		"""
 		Dynamic printer with progress bar
 		"""

@@ -1,6 +1,11 @@
 # Byte-compiled / optimized / DLL files
 *.py[cod]
 
+# Pickle objects
+*.cpkl
+*.pk
+*.pkl
+
 # Mac OS X file
 .DS_Store
 

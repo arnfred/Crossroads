@@ -1,3 +1,5 @@
+# Modified version of of onlineldavb
+#
 # onlineldavb.py: Package of functions for fitting Latent Dirichlet
 # Allocation (LDA) with online variational Bayes (VB).
 #
