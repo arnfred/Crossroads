@@ -326,7 +326,7 @@ class mystdout(object):
 				raw_s += " "*(progress_len-n) + "]"									# Progress bar padding
 				if show_percentage:
 					raw_s +=  " {0:.0f}%".format(100*float(progress)/progress_max)	# Add percentage
-				raw_s += " in %d sec" % mystdout.time_interval(update=ln)			# Show time
+				raw_s += " in %d min" % (mystdout.time_interval(update=ln)/60)		# Show time
 			raw_s += "\n"*ln 														# Add a \n if wanted
 			stdout.write(raw_s)
 			if time.time()-mystdout.last_flush > 0.1 or ln:

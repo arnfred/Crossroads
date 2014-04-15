@@ -17,9 +17,7 @@ import nltk
 import database
 from database import Article
 
-stemmer = nltk.PorterStemmer()
-stopwords  = set(open('arxiv/stopwords_english.txt', 'ru').read().split(','))
-vocabulary = open('arxiv/voc.txt', 'r').read().rstrip('\n').split('\n')
+stopwords  = set(open('data/stopwords_english.txt', 'ru').read().split(','))
 
 def tokenizer(doc):
 	"""
@@ -45,6 +43,7 @@ def tokenizer(doc):
 	# Remove too short words
 	words = [w for w in words if len(w) > 1]
 	# Stem the words to their root
+	stemmer = nltk.PorterStemmer()
 	words = [stemmer.stem(w) for w in words]
 	return words
 

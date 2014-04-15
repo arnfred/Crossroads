@@ -186,6 +186,16 @@ class OnlineLDA:
 
         return(gamma, bound)
 
+    def update_gamma(self,docs):
+        """
+        Just compute the variational distribution over the topic weights 
+        theta for the documents analyzed in this update, but does not update
+        the topics.
+        """
+        (gamma, sstats) = self.do_e_step(docs)
+        return gamma
+
+
     def approx_bound(self, docs, gamma):
         """
         Estimates the variational bound over *all documents* using only
