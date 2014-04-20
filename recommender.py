@@ -2,7 +2,7 @@ import cPickle
 import numpy as np 
 import scipy
 import sqlite3
-import shelve
+# import shelve
 
 import sklearn.neighbors
 
@@ -186,41 +186,44 @@ class Recommender():
 
     # ====================================================================================================
 
-    def build_id_to_title_map(self, filename):
-        """
-        Build the Id to Title mapping from the arXiv database
-        using Shelve lib
-        (The database connection needs to be opened)
+    # def build_id_to_title_map(self, filename):
+    #     """
+    #     Build the Id to Title mapping from the arXiv database
+    #     using Shelve lib
+    #     (The database connection needs to be opened)
 
-        Arguments:
-        filename : string
-            Location where the database will be saved
-        """
-        try:
-            result = self.cursor.execute("SELECT id,title FROM Articles").fetchall()
-            self.id_to_title_map = shelve.open(filename)
-            self.id_to_title_map.update(dict(result))
-        except AttributeError:
-            print "You should first open the database connection"
+    #     Arguments:
+    #     filename : string
+    #         Location where the database will be saved
+    #     """
+    #     try:
+    #         result = self.cursor.execute("SELECT id,title FROM Articles").fetchall()
+    #         self.id_to_title_map = shelve.open(filename)
+    #         self.id_to_title_map.update(dict(result))
+    #     except AttributeError:
+    #         print "You should first open the database connection"
 
-    def load_id_to_title_map(self, filename):
-        """
-        Load the Id to Title mapping using Shelve lib
+    # def load_id_to_title_map(self, filename):
+    #     """
+    #     Load the Id to Title mapping using Shelve lib
 
-        Arguments:
-        filename : string
-            Location of the file
-        """
-        try:
-            self.id_to_title_map = shelve.open(filename)
-        except IOError:
-            print "File %s not found" % filename
+    #     Arguments:
+    #     filename : string
+    #         Location of the file
+    #     """
+    #     try:
+    #         self.id_to_title_map = shelve.open(filename)
+    #     except IOError:
+    #         print "File %s not found" % filename
 
-    def save_id_to_title_map(self):
-        """
-        Save the Id to Title mapping (using Shelve lib)
-        """
-        self.id_to_title_map.close()
+    # def save_id_to_title_map(self):
+    #     """
+    #     Save the Id to Title mapping (using Shelve lib)
+    #     """
+    #     self.id_to_title_map.close()
+
+    def get_title(self, paper_id):
+        return self.cursor.execute("SELECT title FROM Articles WHERE id == ?", (paper_id,)).fetchone()
 
     # ====================================================================================================
 

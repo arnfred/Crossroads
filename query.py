@@ -13,8 +13,9 @@ from recommender import Recommender
 recommender = Recommender()
 # Load feature vectors (may be long)
 recommender.load_feature_vectors('data/feature_vectors_2013_K200.cpkl')
-# Load id to title map
-recommender.load_id_to_title_map('data/id_to_title_map.db')
+# # Load id to title map
+# recommender.load_id_to_title_map('data/id_to_title_map.db')
+recommender.open_db_connection('data/arxiv.db')
 # Build tree (may be long)
 recommender.build_tree(metric='euclidean')
 
@@ -37,14 +38,18 @@ def center(paper_id, k = 10) :
 			- 'links' are composed of:
 				- a 'source' : the id of the paper if are querying (i.e. paper_id)
 				- a 'target' : the id of the neighbor
-				- a 'weight' : the distance between the paper and its neighbor
+				- a 'value' : the distance between the paper and its neighbor
 					(i.e. the smaller it is, the closer the papers are)
 	"""
-	distances, indices = recommender.get_nearest_neighbors(paper_id, k)
-	nodes = [{ 'index' : neighbor_id, 'title': recommender.id_to_title_map[neighbor_id]} \
-			for neighbor_id in recommender.ids[indices]]
-	links = [{'source' : paper_id, 'target' : neighbor_id, 'weight': dist} \
-			for neighbor_id, dist in zip(recommender.ids[indices], distances)]
+	if paper_id != "":
+		distances, indices = recommender.get_nearest_neighbors(paper_id, k)
+		nodes = [{ 'index' : neighbor_id, 'title': recommender.get_title(neighbor_id)} \
+				for neighbor_id in recommender.ids[indices]]
+		links = [{'source' : paper_id, 'target' : neighbor_id, r'value': 100*dist} \
+				for neighbor_id, dist in zip(recommender.ids[indices], distances)]
+	else:
+		nodes = []
+		links = []
 	return json.dumps({'nodes' : nodes, 'links' : links})
 
 
