@@ -1,5 +1,5 @@
 import cPickle
-import numpy as np 
+import numpy as np
 import scipy
 import sqlite3
 # import shelve
@@ -31,8 +31,8 @@ class Recommender():
 
     # ====================================================================================================
 
-    def train(self, K, voc_filename, batch_size=512, epochs_to_do=2, 
-        start_date='2000-01-01 00:00:00.000000', end_date='2015-01-01 00:00:00.000000', 
+    def train(self, K, voc_filename, batch_size=512, epochs_to_do=2,
+        start_date='2000-01-01 00:00:00.000000', end_date='2015-01-01 00:00:00.000000',
         categories=CATEGORIES_SET, addSmoothing=True):
         """
         Train the recommender based on LDA
@@ -62,13 +62,13 @@ class Recommender():
         # End date of documents
         self.end_date = end_date
         # Categories pattern used in SQL query
-        self.cat_query_condition = self.make_cat_query_condition(categories) 
+        self.cat_query_condition = self.make_cat_query_condition(categories)
         # Number of topics
         self.K = K
         # Vocabulary size
         self.W = len(self.parser.vocabulary_)
         # Total number of documents
-        self.D = self.cursor.execute("""SELECT COUNT(*) FROM Articles 
+        self.D = self.cursor.execute("""SELECT COUNT(*) FROM Articles
             WHERE updated_at > '%s' AND updated_at < '%s'
             AND (%s) """ % \
             (self.start_date, self.end_date, self.cat_query_condition)).fetchone()[0]
@@ -80,13 +80,13 @@ class Recommender():
     def _run_onlineldavb(self, batch_size, epochs_to_do, addSmoothing):
         """
         Run the online VB algorithm on the data
-        """       
+        """
         # Initialize utility variables
         self.ids = list()           # A mapping between papers id and vector indices
-        self.feature_vectors = []   # Feature vectors for each document  
-        
+        self.feature_vectors = []   # Feature vectors for each document
+
         perplexity = 0.0
-        self.perplexity = []         
+        self.perplexity = []
 
         # Run multiple over each documents
         for epoch in range(epochs_to_do):
@@ -95,9 +95,9 @@ class Recommender():
 
             # Query for all documents we want
             query = self.cursor.execute("""SELECT abstract,id
-                FROM Articles 
+                FROM Articles
                 WHERE updated_at > '%s' AND updated_at < '%s'
-                AND (%s) 
+                AND (%s)
                 ORDER BY updated_at""" % \
                 (self.start_date, self.end_date, self.cat_query_condition))
 
@@ -116,11 +116,11 @@ class Recommender():
                 if epoch < epochs_to_do-1:
                     # Give them to online LDA
                     (gamma, bound) = self.olda.update_lambda(cur_docset)
-                    
+
                     # Compute an estimate of held-out perplexity
                     (wordids, wordcts) = self.parser.parse_doc_list(cur_docset)
-                    perwordbound = bound * len(cur_docset) / (self.D * sum(map(sum, wordcts)))   
-                    
+                    perwordbound = bound * len(cur_docset) / (self.D * sum(map(sum, wordcts)))
+
                     perplexity = np.exp(-perwordbound)
                     if iteration%10 == 0:
                         self.perplexity += [perplexity]
@@ -128,7 +128,7 @@ class Recommender():
                 if epoch == epochs_to_do-1:
                     # In the last epoch, do not update the model (only get the feature vectors)
                     gamma = self.olda.update_gamma(cur_docset)
-                    
+
                     # Keep track of the feature vectors for each documment
                     self.ids += [j for i,j in result] # ids corresponding to current documents
                     self.feature_vectors += self.compute_feature_vectors(gamma, addSmoothing=addSmoothing).tolist()
@@ -237,7 +237,7 @@ class Recommender():
             Manhattan distance is used by default as it is a good metric to compare
             probability distributions
         """
-        self.btree = sklearn.neighbors.BallTree(self.feature_vectors, 
+        self.btree = sklearn.neighbors.BallTree(self.feature_vectors,
             leaf_size=30, metric=metric)
 
     def load_tree(self, filename):
@@ -269,8 +269,8 @@ class Recommender():
             print "File %s not found" % filename
 
 
-     # ====================================================================================================   
-    
+     # ====================================================================================================
+
     # ====================================================================================================
 
     def close_db_connection(self):

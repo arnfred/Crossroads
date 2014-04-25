@@ -17,9 +17,9 @@ class index:
 # Returns the nearest neighbors of a given id
 class document:
     def GET(self, doc_id):
-		return query.center(id)
+		return query.center(doc_id)
 
 # Run the app
-if __name__ == "__main__": 
+if __name__ == "__main__":
     app = web.application(urls, globals())
-    app.run()     
+    app.run()

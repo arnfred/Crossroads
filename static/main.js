@@ -17,11 +17,13 @@ var force = d3.layout.force()
 var start = function(id) {
 
 	if (id == undefined) {
-		id = ""
+		id = "1304.5220"
 	}
 	// Stop and clear existing force layout
 	svg.selectAll(".link").remove()
 	svg.selectAll(".node").remove()
+
+    console.debug(id)
 
 	// Load data and start force layout
 	d3.json("/d/" + id, function(error, graph) {

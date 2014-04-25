@@ -14,14 +14,12 @@ recommender = Recommender()
 # Load feature vectors (may be long)
 recommender.load_feature_vectors('data/feature_vectors_2013_K200.cpkl')
 # # Load id to title map
-# recommender.load_id_to_title_map('data/id_to_title_map.db')
-recommender.open_db_connection('data/arxiv.db')
 # Build tree (may be long)
 recommender.build_tree(metric='euclidean')
 
 def center(paper_id, k = 10) :
-	""" 
-	return a graph with the k nearest neighbors of the paper_id 
+	"""
+	return a graph with the k nearest neighbors of the paper_id
 
 	Arguments:
 		paper_id : string
@@ -41,6 +39,8 @@ def center(paper_id, k = 10) :
 				- a 'value' : the distance between the paper and its neighbor
 					(i.e. the smaller it is, the closer the papers are)
 	"""
+	# recommender.load_id_to_title_map('data/id_to_title_map.db')
+	recommender.open_db_connection('data/arxiv.db')
 	if paper_id != "":
 		distances, indices = recommender.get_nearest_neighbors(paper_id, k)
 		nodes = [{ 'index' : neighbor_id, 'title': recommender.get_title(neighbor_id)} \
@@ -58,6 +58,6 @@ def getTEMPgraph(n) :
 	nodes  = [{ 'index' : i } for i in range(n)]
 	return json.dumps({
 		'nodes' : nodes,
-		'links' : map(lambda i : { 'target' : i, 'source' : random.randint(0,99), 
+		'links' : map(lambda i : { 'target' : i, 'source' : random.randint(0,99),
 			r'value' : random.randint(0,99)}, range(n))
 	}, indent=4)
