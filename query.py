@@ -44,17 +44,33 @@ def center(paper_id, k) :
     """
     # recommender.load_id_to_title_map('data/id_to_title_map.db')
     recommender.open_db_connection('data/arxiv.db')
-    g = Graph(recommender.get_title)
+    graph = Graph(recommender.get_title)
+    print(graph)
+    print(k)
     # Populate graph
     if paper_id != "":
-        distances, indices = recommender.get_nearest_neighbors(paper_id, k)
-        for dist, node_id in zip(distances, recommender.ids[indices]) :
-            g.add(node_id, paper_id, dist)
+        graph_walk(graph, [(paper_id, 0)], k = k, visited = {})
     # Create json
-    graph_json = g.to_JSON()
-    print(graph_json)
+    graph_json = graph.to_JSON()
     return graph_json
 
+
+def graph_walk(graph, to_visit = [], k = 11, max_level = 4, visited = {}) :
+    """ Given a paper id, we find the nearest neighbors and add them to the
+    graph, then find the nearest neighbors of these and add those to the graph
+    recursing k steps down """
+    # Let's explore the graph if there is anything left to explore
+    while len(to_visit) > 0 :
+        parent_id, level = to_visit.pop()
+        visited[parent_id] = True
+        distances, indices = recommender.get_nearest_neighbors(parent_id, k)
+        print(distances, indices)
+        for dist, node_id in zip(distances, recommender.ids[indices]) :
+            # Anyway, add node to graph (if it exists, the new link is added)
+            graph.add(node_id, parent_id, dist)
+            # If we haven't seen this node we continue
+            if node_id not in visited and level + 1 <= max_level :
+                to_visit.append((node_id, level + 1))
 
 
 class Graph :
@@ -65,19 +81,25 @@ class Graph :
         self.get_title = get_title
 
 
-    def add(self, id, parent_id, distance) :
+    def add(self, node_id, parent_id, distance) :
         """ Add one node to the graph """
         # Checks if node exists already
-        if not self.nodes.get(id, False) :
-            self.nodes[id] = {
-                'title' : self.get_title(id),
+        if node_id not in self.nodes :
+            self.nodes[node_id] = {
+                'title' : self.get_title(node_id),
                 'links' : {
                     parent_id : int(100*distance)
                 }
             }
+
         # If not, then add the link to the parent to the map of links
         else :
-            self.nodes[id]['links']['parent_id'] = distance
+            self.nodes[node_id]['links'][parent_id] = distance
+
+
+    def exists(self, node_id) :
+        """ Function to check if node exists in graph already """
+        return node_id in self.nodes
 
 
     def to_JSON(self) :
@@ -87,7 +109,6 @@ class Graph :
                  for node_id, val in self.nodes.iteritems()]
         # Create map of indices
         idx = { val['id']:i for i, val in enumerate(nodes) }
-        print(idx)
         # Create list of links
         links = self.flatten([self.make_links(n, nid, idx)
                               for nid, n in self.nodes.iteritems()])

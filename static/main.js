@@ -7,10 +7,10 @@ var svg = d3.select("body").append("svg")
 
 var force = d3.layout.force()
     .gravity(.15)
-    .distance(100)
-    .charge(-100)
-	//.linkDistance(function (l) { return l.value; })
-	.linkStrength(function (l) { return l.value / 100.0; })
+    .distance(10)
+    .charge(-150)
+	.linkDistance(function (l) { return l.value; })
+	.linkStrength(function (l) { return l.value / 10.0; })
 	.size([width, height]);
 
 // Add data to graph
@@ -26,7 +26,7 @@ var start = function(id) {
     console.debug(id)
 
 	// Load data and start force layout
-	d3.json("/d/" + id, function(error, graph) {
+	d3.json("/d/" + id + "/" + 5 + "/", function(error, graph) {
 
 		console.debug(error)
 		console.debug(graph)
