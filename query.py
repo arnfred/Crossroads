@@ -1,8 +1,8 @@
 import json
-import random
 import recommender
 reload(recommender)
 from recommender import Recommender
+from itertools import chain
 
 # Init recommender
 def init_recommender() :
@@ -44,23 +44,62 @@ def center(paper_id, k) :
     """
     # recommender.load_id_to_title_map('data/id_to_title_map.db')
     recommender.open_db_connection('data/arxiv.db')
+    g = Graph(recommender.get_title)
+    # Populate graph
     if paper_id != "":
         distances, indices = recommender.get_nearest_neighbors(paper_id, k)
-        nodes = [{ 'id' : neighbor_id, 'title': recommender.get_title(neighbor_id)} \
-                 for i, neighbor_id in zip(indices, recommender.ids[indices])]
-        links = [{'source' : i, 'target' : 0, 'value': int(100*dist)} \
-                 for i, dist in enumerate(distances)]
-    else:
-        nodes = []
-        links = []
-    return json.dumps({'nodes' : nodes, 'links' : links})
+        for dist, node_id in zip(distances, recommender.ids[indices]) :
+            g.add(node_id, paper_id, dist)
+    # Create json
+    graph_json = g.to_JSON()
+    print(graph_json)
+    return graph_json
 
 
-def getTEMPgraph(n) :
 
-    nodes  = [{ 'title' : "Yup" } for i in range(n)]
-    return json.dumps({
-        'nodes' : nodes,
-        'links' : map(lambda i : { 'target' : i+4, 'source' : random.randint(0,99),
-                                  r'value' : random.randint(0,99)}, range(n))
-    }, indent=4)
+class Graph :
+    """ Helper class for constructing a graph """
+
+    def __init__(self, get_title) :
+        self.nodes = {}
+        self.get_title = get_title
+
+
+    def add(self, id, parent_id, distance) :
+        """ Add one node to the graph """
+        # Checks if node exists already
+        if not self.nodes.get(id, False) :
+            self.nodes[id] = {
+                'title' : self.get_title(id),
+                'links' : {
+                    parent_id : int(100*distance)
+                }
+            }
+        # If not, then add the link to the parent to the map of links
+        else :
+            self.nodes[id]['links']['parent_id'] = distance
+
+
+    def to_JSON(self) :
+        """ Converts the graph to json """
+        # Create map of nodes
+        nodes = [{ 'id' : node_id, 'title' : val['title'] }
+                 for node_id, val in self.nodes.iteritems()]
+        # Create map of indices
+        idx = { val['id']:i for i, val in enumerate(nodes) }
+        print(idx)
+        # Create list of links
+        links = self.flatten([self.make_links(n, nid, idx)
+                              for nid, n in self.nodes.iteritems()])
+        return json.dumps({'nodes' : nodes, 'links' : links})
+
+
+    def make_links(self, node, node_id, idx) :
+        """ Produces a list of correctly formatted links given a node, an id
+            and an index map """
+        return [{ 'source' : idx[node_id], 'target' : idx[key], 'value' : dist }
+                for key, dist in node['links'].iteritems() ]
+
+
+    def flatten(self, list_list) :
+        return list(chain.from_iterable(list_list))
