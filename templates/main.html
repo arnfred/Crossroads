@@ -3,32 +3,32 @@
 <html lang="en">
 
 <body>
-	<p>The index page</p>
 </body>
 <!DOCTYPE html>
 <meta charset="utf-8">
-<style>
-
-.node {
-  stroke: #3182bd;
-  stroke-width: 1.5px;
-}
-
-.link {
-  fill: none;
-  stroke: #9ecae1;
-  stroke-width: 1.5px;
-}
-
-</style>
+<link href="/static/lib/bootstrap/bootstrap.min.css" rel="stylesheet">
+<link href="/static/main.css" rel="stylesheet">
 <head>
-
-	<title>Crossroads</title>
-	<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
-	<script type="text/javascript" src="/static/main.js"></script>
+<title>Crossroads</title>
 </head>
 
 <body>
-
+      <script src="/static/lib/curl.js" type="text/javascript"></script>
+      <script>
+        curl({
+            paths: {
+            lib: '/static/lib/',
+            js: '/static/js/',
+            templates : '/static/templates/',
+            ractive : "/static/lib/ractive-legacy.min",
+            ractive_tap : "/static/lib/ractive-events-tap.min",
+            ractive_fade : "/static/lib/ractive-transitions-fade.min"
+            }
+        },
+        ["js/graph", "domReady!"],
+        function(graph) {
+	    graph.start()
+        });
+      </script>
 </body>
 </html>

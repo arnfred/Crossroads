@@ -67,7 +67,7 @@ def graph_walk(graph, to_visit = [], k = 11, max_level = 4, visited = {}) :
         print(distances, indices)
         for dist, node_id in zip(distances, recommender.ids[indices]) :
             # Anyway, add node to graph (if it exists, the new link is added)
-            graph.add(node_id, parent_id, dist)
+            graph.add(node_id, parent_id, dist, level + 1)
             # If we haven't seen this node we continue
             if node_id not in visited and level + 1 <= max_level :
                 to_visit.append((node_id, level + 1))
@@ -81,12 +81,21 @@ class Graph :
         self.get_title = get_title
 
 
-    def add(self, node_id, parent_id, distance) :
+    def add(self, node_id, parent_id, distance, level) :
         """ Add one node to the graph """
+        # If this is a link between the same node, then just add the node without links
+        if node_id == parent_id and node_id not in self.nodes :
+            self.nodes[node_id] = {
+                'title' : self.get_title(node_id),
+                'level' : level - 1,
+                'links' : {}
+            }
+
         # Checks if node exists already
         if node_id not in self.nodes :
             self.nodes[node_id] = {
                 'title' : self.get_title(node_id),
+                'level' : level,
                 'links' : {
                     parent_id : int(100*distance)
                 }
@@ -105,7 +114,7 @@ class Graph :
     def to_JSON(self) :
         """ Converts the graph to json """
         # Create map of nodes
-        nodes = [{ 'id' : node_id, 'title' : val['title'] }
+        nodes = [{ 'id' : node_id, 'title' : val['title'], 'level' : val['level'] }
                  for node_id, val in self.nodes.iteritems()]
         # Create map of indices
         idx = { val['id']:i for i, val in enumerate(nodes) }

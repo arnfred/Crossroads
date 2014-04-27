@@ -45,7 +45,10 @@ var start = function(id) {
 			.data(graph.nodes)
 			.enter().append("circle")
 			.attr("class", "node")
-			.attr("r", 5)
+			.attr("r", function(n) {
+                console.debug(n);
+                return 10 - 1.5*n.level;
+            })
 			.call(force.drag);
 
 		force.on("tick", function() {
