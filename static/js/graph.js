@@ -1,11 +1,11 @@
-define(["lib/d3.v3.min", "lib/jquery"], function(d3, $) {
+define(["lib/d3.v3.min"], function(d3) {
 
     var graph = {};
 
-    var width = $("body").width();
-        height = $("body").height();
+    var width = parseInt(d3.select("#graph").style("width"));
+        height = parseInt(d3.select("#graph").style("height")) - 10;
 
-    graph.svg = d3.select("body").append("svg")
+    graph.svg = d3.select("#graph").append("svg")
         .attr("width", width)
         .attr("height", height);
 
@@ -18,22 +18,18 @@ define(["lib/d3.v3.min", "lib/jquery"], function(d3, $) {
         .size([width, height]);
 
     // Add data to graph
-    graph.start = function(id) {
+    graph.start = function(id, click_fun) {
 
-        if (id == undefined) {
+        if (id == "") {
             id = "1304.5220"
         }
+
         // Stop and clear existing force layout
         graph.svg.selectAll(".link").remove()
         graph.svg.selectAll(".node").remove()
 
-        console.debug(id)
-
         // Load data and start force layout
         d3.json("/d/" + id + "/" + 5 + "/", function(error, graph_data) {
-
-            console.debug(error)
-            console.debug(graph)
 
             graph.force
                 .nodes(graph_data.nodes)
@@ -49,8 +45,10 @@ define(["lib/d3.v3.min", "lib/jquery"], function(d3, $) {
                 .data(graph_data.nodes)
                 .enter().append("circle")
                 .attr("class", "node")
+                .on("mouseover", function(n) {
+                    click_fun(n.title, n.id);
+                })
                 .attr("r", function(n) {
-                    console.debug(n);
                     return 10 - 1.5*n.level;
                 })
                 .call(graph.force.drag);
