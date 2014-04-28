@@ -3,8 +3,9 @@ import query
 
 # Define pages
 urls = (
+  '/d/(.[a-z0-9\.]*)/([0-9]*)/', 'document',
   '/', 'index',
-  '/d/(.[a-z0-9\.]*)/([0-9]*)/', 'document'
+  '/(.[a-z0-9\.]*)/', 'index_id'
 )
 render = web.template.render('templates/')
 
@@ -12,7 +13,11 @@ render = web.template.render('templates/')
 # Index page displays start page
 class index:
     def GET(self):
-        return render.main()
+        return render.main("1304.6026")
+
+class index_id:
+    def GET(self, paper_id):
+        return render.main(paper_id)
 
 # Returns the nearest neighbors of a given id
 class document:

@@ -1,4 +1,4 @@
-
+$def with(paper_id)
 <!DOCTYPE html>
 <html lang="en">
 
@@ -34,7 +34,7 @@
         },
         ["js/graph", "js/pane", "domReady!"],
         function(graph, pane) {
-            graph.start("", pane.graph_click)
+            graph.start($paper_id, pane.graph_click)
         });
       </script>
 </body>
