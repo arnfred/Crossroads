@@ -4,12 +4,13 @@ reload(recommender)
 from recommender import Recommender
 from itertools import chain
 
+
 # Init recommender
 def init_recommender() :
     # Init recommender
     recommender = Recommender()
     # Load feature vectors (may be long)
-    recommender.load_feature_vectors('data/feature_vectors_2013_K200.cpkl')
+    recommender.load_feature_vectors('data/feature_vectors_K200.cpkl')
     # # Load id to title map
     # Build tree (may be long)
     recommender.build_tree(metric='euclidean')
@@ -44,9 +45,7 @@ def center(paper_id, k) :
     """
     # recommender.load_id_to_title_map('data/id_to_title_map.db')
     recommender.open_db_connection('data/arxiv.db')
-    graph = Graph(recommender.get_title)
-    print(graph)
-    print(k)
+    graph = Graph(recommender.get_data)
     # Populate graph
     if paper_id != "":
         graph_walk(graph, [(paper_id, 0)], k = k, visited = {})
@@ -55,7 +54,7 @@ def center(paper_id, k) :
     return graph_json
 
 
-def graph_walk(graph, to_visit = [], k = 11, max_level = 4, visited = {}) :
+def graph_walk(graph, to_visit = [], k = 5, max_level = 3, visited = {}) :
     """ Given a paper id, we find the nearest neighbors and add them to the
     graph, then find the nearest neighbors of these and add those to the graph
     recursing k steps down """
@@ -64,7 +63,6 @@ def graph_walk(graph, to_visit = [], k = 11, max_level = 4, visited = {}) :
         parent_id, level = to_visit.pop()
         visited[parent_id] = True
         distances, indices = recommender.get_nearest_neighbors(parent_id, k)
-        print(distances, indices)
         for dist, node_id in zip(distances, recommender.ids[indices]) :
             # Anyway, add node to graph (if it exists, the new link is added)
             graph.add(node_id, parent_id, dist, level + 1)
@@ -76,26 +74,34 @@ def graph_walk(graph, to_visit = [], k = 11, max_level = 4, visited = {}) :
 class Graph :
     """ Helper class for constructing a graph """
 
-    def __init__(self, get_title) :
+    def __init__(self, get_data) :
         self.nodes = {}
-        self.get_title = get_title
-
+        self.get_data = get_data
 
     def add(self, node_id, parent_id, distance, level) :
         """ Add one node to the graph """
+        data = self.get_data(node_id)
+        abstract = data['abstract']
+        title = data['title']
+        authors = data['authors'].replace('|', ', ')+u'\n'
+
         # If this is a link between the same node, then just add the node without links
         if node_id == parent_id and node_id not in self.nodes :
             self.nodes[node_id] = {
-                'title' : self.get_title(node_id),
-                'level' : level - 1,
-                'links' : {}
+                'title'   : title,
+                'level'   : level - 1,
+                'abstract': abstract,
+                'authors' : authors,
+                'links'   : {}
             }
 
         # Checks if node exists already
         if node_id not in self.nodes :
             self.nodes[node_id] = {
-                'title' : self.get_title(node_id),
+                'title' : title,
                 'level' : level,
+                'abstract': abstract,
+                'authors' : authors,
                 'links' : {
                     parent_id : int(100*distance)
                 }
@@ -114,7 +120,7 @@ class Graph :
     def to_JSON(self) :
         """ Converts the graph to json """
         # Create map of nodes
-        nodes = [{ 'id' : node_id, 'title' : val['title'], 'level' : val['level'] }
+        nodes = [{ 'id' : node_id, 'title' : val['title'], 'abstract' : val['abstract'], 'authors' : val['authors'], 'level' : val['level'] }
                  for node_id, val in self.nodes.iteritems()]
         # Create map of indices
         idx = { val['id']:i for i, val in enumerate(nodes) }

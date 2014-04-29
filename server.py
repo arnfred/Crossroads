@@ -13,7 +13,7 @@ render = web.template.render('templates/')
 # Index page displays start page
 class index:
     def GET(self):
-        return render.main("1304.6026")
+        return render.main("1401.6060")
 
 class index_id:
     def GET(self, paper_id):

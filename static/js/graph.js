@@ -24,12 +24,12 @@ define(["lib/d3.v3.min"], function(d3) {
             id = "1304.5220"
         }
 
-        // Stop and clear existing force layout
-        graph.svg.selectAll(".link").remove()
-        graph.svg.selectAll(".node").remove()
-
         // Load data and start force layout
         d3.json("/d/" + id + "/" + 5 + "/", function(error, graph_data) {
+
+            // Stop and clear existing force layout
+            graph.svg.selectAll(".link").remove()
+            graph.svg.selectAll(".node").remove()
 
             graph.force
                 .nodes(graph_data.nodes)
@@ -46,10 +46,29 @@ define(["lib/d3.v3.min"], function(d3) {
                 .enter().append("circle")
                 .attr("class", "node")
                 .on("mouseover", function(n) {
-                    click_fun(n.title, n.id);
+                    click_fun(n.title, n.abstract, n.authors, n.id);
+                })
+                .on("click", function(n) {
+                    graph.start(n.id, click_fun)
                 })
                 .attr("r", function(n) {
-                    return 10 - 1.5*n.level;
+                    return 13 - 2*n.level;
+                })
+                .attr("fill", function(n) {
+                    if (n.id == id) {
+                        return  HSVtoHEX(300, 100, 80)
+                    }
+                    else {
+                        return HSVtoHEX(210, 100, 100 - 20 * n.level)
+                    }
+                })
+                .attr("stroke", function(n) {
+                    if (n.id == id) {
+                        return  HSVtoHEX(300, 100, 60)
+                    }
+                    else {
+                        return HSVtoHEX(210, 100, 120 - 20 * n.level)
+                    }
                 })
                 .call(graph.force.drag);
 
@@ -67,3 +86,52 @@ define(["lib/d3.v3.min"], function(d3) {
     // Start without id
     return graph;
 })
+
+
+
+function HSVtoHEX(h,s,v) { 
+    var rgb = HSVtoRGB(h,s,v)
+    return RGBtoHEX(rgb.r, rgb.g, rgb.b)
+}
+
+function RGBtoHEX(r,g,b) {
+    if (r && g === undefined && b === undefined) {
+        g = r.g, b = r.g, r = r.r;
+    }
+    return "#"+toHex(r)+toHex(g)+toHex(b)
+}
+
+function toHex(n) {
+    n = parseInt(n,10);
+    if (isNaN(n)) return "00";
+    n = Math.max(0,Math.min(n,255));
+    return "0123456789ABCDEF".charAt((n-n%16)/16)
+        + "0123456789ABCDEF".charAt(n%16);
+}
+
+function HSVtoRGB(h, s, v) {
+    var r, g, b;
+    if (h && s === undefined && v === undefined) {
+        s = h.s, v = h.v, h = h.h;
+    }
+
+    h = h / 360;
+    s = s / 100;
+    v = v / 100;
+
+    var i = Math.floor(h * 6);
+    var f = h * 6 - i;
+    var p = v * (1 - s);
+    var q = v * (1 - f * s);
+    var t = v * (1 - (1 - f) * s);
+
+    switch (i % 6) {
+        case 0: r = v, g = t, b = p; break;
+        case 1: r = q, g = v, b = p; break;
+        case 2: r = p, g = v, b = t; break;
+        case 3: r = p, g = q, b = v; break;
+        case 4: r = t, g = p, b = v; break;
+        case 5: r = v, g = p, b = q; break;
+    }
+    return { 'r':Math.round(r * 255), 'g':Math.round(g * 255), 'b':Math.round(b * 255)};
+}

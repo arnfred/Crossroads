@@ -223,7 +223,19 @@ class Recommender():
     #     self.id_to_title_map.close()
 
     def get_title(self, paper_id):
+        """
+        Return the title of the paper with paper_id
+        """
         return self.cursor.execute("SELECT title FROM Articles WHERE id == ?", (paper_id,)).fetchone()
+
+    def get_data(self, paper_id):
+        """
+        Return all the data concerning the paper with paper_id in a dictionary where keys are 
+        column names and values are the data
+        """
+        data = self.cursor.execute("SELECT * FROM Articles WHERE id == ?", (paper_id,)).fetchone()
+        names = [row[0] for row in self.cursor.description]
+        return dict(zip(names,data))
 
     # ====================================================================================================
 
