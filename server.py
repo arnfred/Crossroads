@@ -17,7 +17,7 @@ class index:
 
 class index_id:
     def GET(self, paper_id):
-        return render.main(paper_id)
+        return render.main(str(paper_id))
 
 # Returns the nearest neighbors of a given id
 class document:
