@@ -11,3 +11,7 @@
 
 # Database files
 *.db
+*.json
+
+# Everything in data folder
+data/*
