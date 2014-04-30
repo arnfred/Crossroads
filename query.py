@@ -10,7 +10,7 @@ def init_recommender() :
     # Init recommender
     recommender = Recommender()
     # Load feature vectors (may be long)
-    recommender.load_feature_vectors('data/feature_vectors_K200.cpkl')
+    recommender.load_feature_vectors('data/feature_vectors_2013_K200.cpkl')
     # # Load id to title map
     # Build tree (may be long)
     recommender.build_tree(metric='euclidean')
