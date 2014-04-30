@@ -46,9 +46,11 @@ define(["lib/d3.v3.min"], function(d3) {
                 .enter().append("circle")
                 .attr("class", "node")
                 .on("mouseover", function(n) {
-                    click_fun(n.title, n.abstract, n.authors, n.id);
+                    setTimeout(function() {
+                        click_fun(n.title, n.abstract, n.authors, n.id);
+                    }, 200);
                 })
-                .on("click", function(n) {
+                .on("dblclick", function(n) {
                     graph.start(n.id, click_fun)
                 })
                 .attr("r", function(n) {
