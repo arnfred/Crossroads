@@ -1,4 +1,4 @@
-define(["lib/d3.v3.min"], function(d3) {
+define(["lib/d3.v3.min", "lib/underscore"], function(d3, _) {
 
     var graph = {};
 
@@ -45,11 +45,9 @@ define(["lib/d3.v3.min"], function(d3) {
                 .data(graph_data.nodes)
                 .enter().append("circle")
                 .attr("class", "node")
-                .on("mouseover", function(n) {
-                    setTimeout(function() {
-                        click_fun(n.title, n.abstract, n.authors, n.id);
-                    }, 200);
-                })
+                .on("mouseover", _.debounce(function(n) {
+                    click_fun(n.title, n.abstract, n.authors, n.id);
+                }, 150))
                 .on("dblclick", function(n) {
                     graph.start(n.id, click_fun)
                 })
@@ -58,20 +56,20 @@ define(["lib/d3.v3.min"], function(d3) {
                 })
                 .attr("fill", function(n) {
                     if (n.id == id) {
-                        return  HSVtoHEX(300, 100, 80)
+                        return  HSVtoHEX(206, 100, 100)
                     }
                     else {
                         return HSVtoHEX(210, 100, 100 - 20 * n.level)
                     }
                 })
-                .attr("stroke", function(n) {
-                    if (n.id == id) {
-                        return  HSVtoHEX(300, 100, 60)
-                    }
-                    else {
-                        return HSVtoHEX(210, 100, 120 - 20 * n.level)
-                    }
-                })
+                .attr("stroke", "none")
+                //    if (n.id == id) {
+                //        return  HSVtoHEX(300, 100, 60)
+                //    }
+                //    else {
+                //        return HSVtoHEX(210, 100, 120 - 20 * n.level)
+                //    }
+                //})
                 .call(graph.force.drag);
 
             graph.force.on("tick", function() {
@@ -91,7 +89,7 @@ define(["lib/d3.v3.min"], function(d3) {
 
 
 
-function HSVtoHEX(h,s,v) { 
+function HSVtoHEX(h,s,v) {
     var rgb = HSVtoRGB(h,s,v)
     return RGBtoHEX(rgb.r, rgb.g, rgb.b)
 }
