@@ -1,20 +1,20 @@
 import json
+from itertools import chain
+
+import networkx as nx
+
 import recommender
 reload(recommender)
 from recommender import Recommender
-from itertools import chain
+
+
+
 
 
 # Init recommender
 def init_recommender() :
-    # Init recommender
-    recommender = Recommender()
-    # Load feature vectors (may be long)
-    recommender.load_feature_vectors('data/feature_vectors_2013_K200.cpkl')
-    # # Load id to title map
-    # Build tree (may be long)
-    recommender.build_tree(metric='euclidean')
-
+    recommender = Recommender('data/recommender.h5', 'data/arxiv.db')
+    recommender.load_all()
     return recommender
 recommender = init_recommender()
 
@@ -44,7 +44,7 @@ def center(paper_id, k) :
                     (i.e. the smaller it is, the closer the papers are)
     """
     # recommender.load_id_to_title_map('data/id_to_title_map.db')
-    recommender.open_db_connection('data/arxiv.db')
+    recommender.open_db_connection()
     graph = Graph(recommender.get_data)
     # Populate graph
     if paper_id != "":
@@ -54,7 +54,7 @@ def center(paper_id, k) :
     return graph_json
 
 
-def graph_walk(graph, to_visit = [], k = 5, max_level = 3, visited = {}) :
+def graph_walk(graph, to_visit = [], k = 5, max_level = 2, visited = {}) :
     """ Given a paper id, we find the nearest neighbors and add them to the
     graph, then find the nearest neighbors of these and add those to the graph
     recursing k steps down """
@@ -62,6 +62,7 @@ def graph_walk(graph, to_visit = [], k = 5, max_level = 3, visited = {}) :
     while len(to_visit) > 0 :
         parent_id, level = to_visit.pop()
         visited[parent_id] = True
+        graph.add(parent_id, parent_id, 0.0, 0)
         distances, indices = recommender.get_nearest_neighbors(parent_id, k)
         for dist, node_id in zip(distances, recommender.ids[indices]) :
             # Anyway, add node to graph (if it exists, the new link is added)
@@ -103,7 +104,7 @@ class Graph :
                 'abstract': abstract,
                 'authors' : authors,
                 'links' : {
-                    parent_id : int(100*distance)
+                    parent_id : distance
                 }
             }
 

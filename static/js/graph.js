@@ -13,8 +13,8 @@ define(["lib/d3.v3.min"], function(d3) {
         .gravity(.15)
         .distance(10)
         .charge(-150)
-        .linkDistance(function (l) { return l.value; })
-        .linkStrength(function (l) { return l.value / 10.0; })
+        .linkDistance(function (l) { return 100*l.value; })
+        .linkStrength(function (l) { return l.value; })
         .size([width, height]);
 
     // Add data to graph
@@ -54,14 +54,14 @@ define(["lib/d3.v3.min"], function(d3) {
                     graph.start(n.id, click_fun)
                 })
                 .attr("r", function(n) {
-                    return 13 - 2*n.level;
+                    return 13 - 3*n.level;
                 })
                 .attr("fill", function(n) {
                     if (n.id == id) {
                         return  HSVtoHEX(300, 100, 80)
                     }
                     else {
-                        return HSVtoHEX(210, 100, 100 - 20 * n.level)
+                        return HSVtoHEX(210, 100, 100 - 30 * n.level)
                     }
                 })
                 .attr("stroke", function(n) {
@@ -69,7 +69,7 @@ define(["lib/d3.v3.min"], function(d3) {
                         return  HSVtoHEX(300, 100, 60)
                     }
                     else {
-                        return HSVtoHEX(210, 100, 120 - 20 * n.level)
+                        return HSVtoHEX(210, 100, 120 - 30 * n.level)
                     }
                 })
                 .call(graph.force.drag);
