@@ -1,4 +1,4 @@
-define(["ractive", "text!templates/pane.html"], function(R, pane_template) {
+define(["ractive", "lib/underscore", "text!templates/info_pane.html"], function(R, _, pane_template) {
 
 	////////////////////////////////////////
 	//                                    //
@@ -8,7 +8,7 @@ define(["ractive", "text!templates/pane.html"], function(R, pane_template) {
 
 	var view = new R({
 		template : pane_template,
-		el : "pane",
+		el : "info_pane",
 		data : {
             id : undefined,
 			title : undefined,
@@ -34,12 +34,12 @@ define(["ractive", "text!templates/pane.html"], function(R, pane_template) {
 	//                                    //
 	////////////////////////////////////////
 
-    view.graph_click = function(title, abstract, authors, id) {
-        view.set("id", id);
-        view.set("title", title);
-        view.set("abstract", abstract);
-        view.set("authors", authors)
-        view.set("paper", true);
+    view.display = function(node) {
+		view.set("id", node.id);
+		view.set("title", node.title);
+		view.set("abstract", node.abstract);
+		view.set("authors", node.authors)
+		view.set("paper", true);
     }
 
 	////////////////////////////////////////

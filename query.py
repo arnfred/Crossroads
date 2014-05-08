@@ -1,8 +1,6 @@
 import json
 from itertools import chain
 
-import networkx as nx
-
 import recommender
 reload(recommender)
 from recommender import Recommender
@@ -18,8 +16,7 @@ def init_recommender() :
     return recommender
 recommender = init_recommender()
 
-# WARNING : Note that importing this module might take a up to a minute in order
-# to load the recommender data. But this is only done once during the import.
+graph = nx.Graph()
 
 def center(paper_id, k) :
     """
@@ -43,15 +40,13 @@ def center(paper_id, k) :
                 - a 'value' : the distance between the paper and its neighbor
                     (i.e. the smaller it is, the closer the papers are)
     """
-    # recommender.load_id_to_title_map('data/id_to_title_map.db')
+    global graph
     recommender.open_db_connection()
     graph = Graph(recommender.get_data)
     # Populate graph
     if paper_id != "":
         graph_walk(graph, [(paper_id, 0)], k = k, visited = {})
-    # Create json
-    graph_json = graph.to_JSON()
-    return graph_json
+    return graph.to_JSON()
 
 
 def graph_walk(graph, to_visit = [], k = 5, max_level = 2, visited = {}) :
@@ -62,7 +57,7 @@ def graph_walk(graph, to_visit = [], k = 5, max_level = 2, visited = {}) :
     while len(to_visit) > 0 :
         parent_id, level = to_visit.pop()
         visited[parent_id] = True
-        graph.add(parent_id, parent_id, 0.0, 0)
+        graph.add(parent_id, parent_id, 0.0, 1)
         distances, indices = recommender.get_nearest_neighbors(parent_id, k)
         for dist, node_id in zip(distances, recommender.ids[indices]) :
             # Anyway, add node to graph (if it exists, the new link is added)
@@ -71,8 +66,7 @@ def graph_walk(graph, to_visit = [], k = 5, max_level = 2, visited = {}) :
             if node_id not in visited and level + 1 <= max_level :
                 to_visit.append((node_id, level + 1))
 
-
-class Graph :
+class Graph(object) :
     """ Helper class for constructing a graph """
 
     def __init__(self, get_data) :
@@ -86,6 +80,10 @@ class Graph :
         title = data['title']
         authors = data['authors'].replace('|', ', ')+u'\n'
 
+        # Replace "/" in node ids to prevent from server errors
+        node_id = node_id.replace('/', '.')
+        parent_id = parent_id.replace('/', '.')
+
         # If this is a link between the same node, then just add the node without links
         if node_id == parent_id and node_id not in self.nodes :
             self.nodes[node_id] = {
@@ -93,6 +91,7 @@ class Graph :
                 'level'   : level - 1,
                 'abstract': abstract,
                 'authors' : authors,
+                'parent_id' : parent_id,
                 'links'   : {}
             }
 
@@ -103,6 +102,7 @@ class Graph :
                 'level' : level,
                 'abstract': abstract,
                 'authors' : authors,
+                'parent_id' : parent_id,
                 'links' : {
                     parent_id : distance
                 }
@@ -121,7 +121,14 @@ class Graph :
     def to_JSON(self) :
         """ Converts the graph to json """
         # Create map of nodes
-        nodes = [{ 'id' : node_id, 'title' : val['title'], 'abstract' : val['abstract'], 'authors' : val['authors'], 'level' : val['level'] }
+        nodes = [{
+            'id' : node_id, 
+            'title' : val['title'], 
+            'abstract' : val['abstract'],
+            'authors' : val['authors'], 
+            'level' : val['level'],
+            'parent_id' : val['parent_id']
+            }
                  for node_id, val in self.nodes.iteritems()]
         # Create map of indices
         idx = { val['id']:i for i, val in enumerate(nodes) }

@@ -1,139 +1,150 @@
-define(["lib/d3.v3.min"], function(d3) {
+define([
+    "lib/d3.v3.min", 
+    "lib/underscore",
+    "js/info_pane",
+    "js!lib/colorbrewer.js"], 
+    function(d3, _, pane) {
 
     var graph = {};
 
-    var width = parseInt(d3.select("#graph").style("width"));
+    var width = parseInt(d3.select("#graph").style("width")),
         height = parseInt(d3.select("#graph").style("height")) - 10;
 
-    graph.svg = d3.select("#graph").append("svg")
+    var svg = d3.select("#graph").append("svg")
         .attr("width", width)
         .attr("height", height);
 
-    graph.force = d3.layout.force()
+    var nodes = [],
+        links = [];
+
+    var colors = function(e) {
+        i = colorbrewer['YlGnBu'][4];
+        return i[e]
+    };
+
+    var force = d3.layout.force()
+        .size([width, height])
         .gravity(.15)
-        .distance(10)
-        .charge(-150)
-        .linkDistance(function (l) { return 100*l.value; })
-        .linkStrength(function (l) { return l.value; })
-        .size([width, height]);
+        .charge(-250)
+        .linkDistance(function (l) { return 400*l.value; })
+        .linkStrength(1);
 
     // Add data to graph
-    graph.start = function(id, click_fun) {
-
-        if (id == "") {
-            id = "1304.5220"
-        }
+    graph.update = function(paper_id) {
 
         // Load data and start force layout
-        d3.json("/d/" + id + "/" + 5 + "/", function(error, graph_data) {
+        d3.json("/d/" + paper_id + "/" + 5 + "/", function(error, graph_data) {
 
-            // Stop and clear existing force layout
-            graph.svg.selectAll(".link").remove()
-            graph.svg.selectAll(".node").remove()
+            // Mapping between paper ids and array ids
+            graph_idx = _.map(graph_data.nodes, function(n){return n.id});
+            nodes_idx = _.map(nodes, function(n){return n.id});
+            
+            // Find center node id
+            center_node_id = _.indexOf(graph_idx, paper_id)
 
-            graph.force
-                .nodes(graph_data.nodes)
-                .links(graph_data.links)
+            // Initialize info panel with center node data 
+            focused_node = graph_data.nodes[center_node_id];
+            pane.display(focused_node);
+
+            var tmp_nodes = [],
+                tmp_links = [];
+
+            svg.selectAll(".link").remove();
+            svg.selectAll(".node").remove();
+
+            // Iterate over new graph nodes
+            for (var i in graph_data.nodes) {
+                var graph_node = graph_data.nodes[i];
+                
+                // Get id of current node in graph
+                var current_id = _.indexOf(nodes_idx, graph_node.id);
+
+                // If this node is new
+                if (current_id == -1) {
+                    // Get id of parent node in graph
+                    var parent_id = _.indexOf(nodes_idx, graph_node.parent_id);
+                    if (parent_id != -1) {
+                        var parent_node = nodes[parent_id];
+                        graph_node.x = parent_node.x + _.random(-10, 10);
+                        graph_node.y = parent_node.y + _.random(-10, 10);
+                        graph_node.px = parent_node.px + _.random(-10, 10) ;
+                        graph_node.py = parent_node.py + _.random(-10, 10);
+                    }
+                    // Add it to the graph
+                    tmp_nodes.push(graph_node);
+                }
+                // If this node already exists
+                else {
+                    // Keep track of its position
+                    var current_node = nodes[current_id];
+                    graph_node.x = current_node.x;
+                    graph_node.y = current_node.y;
+                    graph_node.px = current_node.px;
+                    graph_node.py = current_node.py;
+                    tmp_nodes.push(graph_node);
+                }
+            }
+            for (var i in graph_data.links) {
+                idx = links.indexOf(graph_data.links[i]);
+                if (idx == -1) {
+                    tmp_links.push(graph_data.links[i]);
+                }
+            }
+
+            nodes = tmp_nodes;
+            links = tmp_links;
+
+            force
+                .nodes(nodes)
+                .links(links)
                 .start();
 
-            var link = graph.svg.selectAll(".link")
-                .data(graph_data.links)
-                .enter().append("line")
-                .attr("class", "link");
+            var node = svg.selectAll(".node")
+                .data(force.nodes(), function(d){ 
+                    return d.id;
+                });
 
-            var node = graph.svg.selectAll(".node")
-                .data(graph_data.nodes)
-                .enter().append("circle")
+            var link = svg.selectAll(".link")
+                .data(force.links(), function(d) { 
+                    return d.source.id + "-" + d.target.id; 
+                });
+
+            link.enter().append("line")
+                .attr("class", "link");
+            link.exit().remove();
+
+            node.enter().append("circle")
                 .attr("class", "node")
                 .on("mouseover", function(n) {
-                    setTimeout(function() {
-                        click_fun(n.title, n.abstract, n.authors, n.id);
-                    }, 200);
+                    pane.display(n);
                 })
                 .on("dblclick", function(n) {
-                    graph.start(n.id, click_fun)
+                    graph.update(n.id)
                 })
                 .attr("r", function(n) {
-                    return 13 - 3*n.level;
+                    return 15 - 2.5*n.level;
                 })
                 .attr("fill", function(n) {
-                    if (n.id == id) {
-                        return  HSVtoHEX(300, 100, 80)
-                    }
-                    else {
-                        return HSVtoHEX(210, 100, 100 - 30 * n.level)
-                    }
+                        return  d3.rgb(colors(n.level));
                 })
-                .attr("stroke", function(n) {
-                    if (n.id == id) {
-                        return  HSVtoHEX(300, 100, 60)
-                    }
-                    else {
-                        return HSVtoHEX(210, 100, 120 - 30 * n.level)
-                    }
-                })
-                .call(graph.force.drag);
+                .call(force.drag);
+            node.exit().remove();
 
-            graph.force.on("tick", function() {
-            link.attr("x1", function(d) { return d.source.x; })
-                .attr("y1", function(d) { return d.source.y; })
-                .attr("x2", function(d) { return d.target.x; })
-                .attr("y2", function(d) { return d.target.y; });
+            force.on("tick", tick);
+            force.start();
 
-            node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
-            });
+
+            function tick() {
+                link.attr("x1", function(d) { return d.source.x; })
+                    .attr("y1", function(d) { return d.source.y; })
+                    .attr("x2", function(d) { return d.target.x; })
+                    .attr("y2", function(d) { return d.target.y; });
+                node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+            }
+
         });
+
     }
 
-    // Start without id
     return graph;
 })
-
-
-
-function HSVtoHEX(h,s,v) { 
-    var rgb = HSVtoRGB(h,s,v)
-    return RGBtoHEX(rgb.r, rgb.g, rgb.b)
-}
-
-function RGBtoHEX(r,g,b) {
-    if (r && g === undefined && b === undefined) {
-        g = r.g, b = r.g, r = r.r;
-    }
-    return "#"+toHex(r)+toHex(g)+toHex(b)
-}
-
-function toHex(n) {
-    n = parseInt(n,10);
-    if (isNaN(n)) return "00";
-    n = Math.max(0,Math.min(n,255));
-    return "0123456789ABCDEF".charAt((n-n%16)/16)
-        + "0123456789ABCDEF".charAt(n%16);
-}
-
-function HSVtoRGB(h, s, v) {
-    var r, g, b;
-    if (h && s === undefined && v === undefined) {
-        s = h.s, v = h.v, h = h.h;
-    }
-
-    h = h / 360;
-    s = s / 100;
-    v = v / 100;
-
-    var i = Math.floor(h * 6);
-    var f = h * 6 - i;
-    var p = v * (1 - s);
-    var q = v * (1 - f * s);
-    var t = v * (1 - (1 - f) * s);
-
-    switch (i % 6) {
-        case 0: r = v, g = t, b = p; break;
-        case 1: r = q, g = v, b = p; break;
-        case 2: r = p, g = v, b = t; break;
-        case 3: r = p, g = q, b = v; break;
-        case 4: r = t, g = p, b = v; break;
-        case 5: r = v, g = p, b = q; break;
-    }
-    return { 'r':Math.round(r * 255), 'g':Math.round(g * 255), 'b':Math.round(b * 255)};
-}
