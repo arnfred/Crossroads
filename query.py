@@ -16,8 +16,6 @@ def init_recommender() :
     return recommender
 recommender = init_recommender()
 
-graph = nx.Graph()
-
 def center(paper_id, k) :
     """
     return a graph with the k nearest neighbors of the paper_id
