@@ -4,7 +4,6 @@ import sqlite3
 import cPickle
 import tables
 import os
-from multiprocessing import Pool, Lock, Queue
 
 import sklearn.neighbors
 
@@ -141,7 +140,7 @@ class Recommender():
                     gamma = self.olda.update_gamma(cur_docset)
 
                     # Keep track of the feature vectors for each documment
-                    self.ids += [j for i,j in result] # ids corresponding to current documents
+                    self.ids += [j.replace('/', '.') for i,j in result] # ids corresponding to current documents
                     self.feature_vectors += self.compute_feature_vectors(gamma, addSmoothing=addSmoothing).tolist()
 
                 mystdout.write("Epoch %d: (%d/%d docs seen), perplexity = %.3f" % \
@@ -164,22 +163,6 @@ class Recommender():
         else:
             gamma -= self.olda._alpha
             return gamma / np.tile(gamma.sum(axis=1), (gamma.shape[1],1)).T
-
-    def load_feature_vectors(self, filename):
-        """
-        Load the feature vectors and the mapping between feature vectors indices and
-        the documents indices
-
-        Arguments:
-        filename : string
-            Location of the file
-        """
-        try:
-            with open(filename, 'rb') as f:
-                (self.feature_vectors, self.ids) = cPickle.load(f)
-        except IOError:
-            print "File %s not found" % filename
-
 
     # ====================================================================================================
 
@@ -261,26 +244,14 @@ class Recommender():
             self.load("neighbors_distances")
             self.load("neighbors_indices")
 
-        queue = Queue()
-        lock = Lock()
-        pool = Pool(processes=6)
-
-
-        args = []
         for i in range(N/batch_size):
-            args.append((i,batch_size,self.btree,self.feature_vectors, queue))
-
-        pool.map(self._get_nearest_neighbors_part, args)
-        distances,indices = queue.get()
+            mystdout.write("Query knn... %d/%d"%(i*batch_size,N), i*batch_size,N)
+            idx = range(i*batch_size, (i+1)*batch_size)
+            distances, indices = self.btree.query(self.feature_vectors[idx,:], k=k+1)
+            self.neighbors_distances[idx,:] = distances[:,1:]
+            self.neighbors_indices[idx,:] = indices[:,1:]
 
         mystdout.write("Query knn... %d/%d"%(i*batch_size,N), i*batch_size,N, ln=1)
-
-    @staticmethod
-    def _get_nearest_neighbors_part(i, batchsize, btree, feature_vectors, queue):
-        mystdout.write("Query knn... %d/%d"%(i*batch_size,N), i*batch_size,N)
-        idx = range(i*batch_size, (i+1)*batch_size)
-        distances, indices = btree.query(feature_vectors[idx,:], k=k+1)
-        queue.put((distances,indices))
 
 
     # ====================================================================================================
@@ -312,12 +283,9 @@ class Recommender():
         Load everything we need
         """
         root = self.h5file.root
-
-        self.load("feature_vectors")
-        self.load("ids")
-        self.load("neighbors_distances")
-        self.load("neighbors_indices")
-
+        for array in self.h5file.listNodes(root):
+            self.load(array.name)
+            
     def load(self, attr):
         """
         Load an attribute from hdf5 file
@@ -336,6 +304,15 @@ class Recommender():
     # ====================================================================================================
 
     def get_nearest_neighbors(self, paper_id, k):
+        """
+        Get the k nearest neighbors for a given paper_id
+
+        Arguments:
+        paper_id : int
+            Id of the paper
+        k : int
+            Number of neighbors to return
+        """
         try:
             idx = np.where(self.ids[:] == paper_id)[0][0]
             distances = self.neighbors_distances[idx,:k]
@@ -344,11 +321,31 @@ class Recommender():
         except KeyError:
             print "Unknown paper id: %s" % paper_id
 
-    def print_topics(self):
-        inverse_voc = {v:k for k, v in self.parser.vocabulary_.items()}
-        arg_to_voc = np.vectorize(lambda i: inverse_voc[i])
-        for k,topic in enumerate(self.olda._lambda):
-            print "===== Topic %d ====="%k
-            print ', '.join(arg_to_voc( topic.argsort()[::-1] )[:10])
-            print ""
+    def get_topic_top_words(self, topic_id, k):
+        """
+        Get the top k words for a given topic (i.e. the ones with highest
+        probability)
+        
+        Arguments:
+        topic_id : int
+            Id of the topic
+        k : int
+            Number of words to return
+        """
+        return recommender.vocabulary[np.argsort(recommender.topics[topic_id][::-1])][:k]
+
+    def get_paper_top_topic(self, paper_id, k):
+        """
+        Get the top k topics for a given paper (i.e. the ones with highest
+        probability)
+        
+        Arguments:
+        paper_id : int
+            Id of the paper
+        k : int
+            Number of topics to return
+        """
+        return np.argsort(recommender.feature_vectors[paper_id][::-1])[:k]
+
+
 
