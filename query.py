@@ -6,15 +6,13 @@ reload(recommender)
 from recommender import Recommender
 
 
-
-
-
 # Init recommender
 def init_recommender() :
-    recommender = Recommender('data/recommender.h5', 'data/arxiv.db')
+    recommender = Recommender('data/new_recommender.h5', 'data/arxiv.db')
     recommender.load_all()
     return recommender
 recommender = init_recommender()
+
 
 def center(paper_id, k) :
     """
@@ -78,9 +76,8 @@ class Graph(object) :
         title = data['title']
         authors = data['authors'].replace('|', ', ')+u'\n'
 
-        # Replace "/" in node ids to prevent from server errors
-        node_id = node_id.replace('/', '.')
-        parent_id = parent_id.replace('/', '.')
+        node_id = node_id
+        parent_id = parent_id
 
         # If this is a link between the same node, then just add the node without links
         if node_id == parent_id and node_id not in self.nodes :
