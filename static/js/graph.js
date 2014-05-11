@@ -116,10 +116,10 @@ define([
             node.enter().append("circle")
                 .attr("class", "node")
                 .on("mouseover", _.debounce(function(n) {
-                    click_fun(n.title, n.abstract, n.authors, n.id);
+                    pane.display(n);
                 }, 150))
                 .on("dblclick", function(n) {
-                    graph.update(n.id)
+                    graph.update(n.id);
                 })
                 .attr("r", function(n) {
                     return 15 - 2.5*n.level;

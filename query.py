@@ -14,6 +14,16 @@ def init_recommender() :
 recommender = init_recommender()
 
 
+def get(paper_id) :
+    recommender.open_db_connection()
+    try :
+        return recommender.get_data(paper_id)
+    except Exception as e :
+        print(e)
+        raise NonExistentID(paper_id)
+
+
+
 def center(paper_id, k) :
     """
     return a graph with the k nearest neighbors of the paper_id
@@ -26,15 +36,7 @@ def center(paper_id, k) :
             Number of neighbors
 
     Returns:
-        json graph with the following description:
-            - 'nodes' are composed of:
-                - an 'index' : the arXiv id
-                - a 'title' : the title of the paper
-            - 'links' are composed of:
-                - a 'source' : the id of the paper if are querying (i.e. paper_id)
-                - a 'target' : the id of the neighbor
-                - a 'value' : the distance between the paper and its neighbor
-                    (i.e. the smaller it is, the closer the papers are)
+        json graph as specified in the Graph class
     """
     global graph
     recommender.open_db_connection()
@@ -142,3 +144,6 @@ class Graph(object) :
 
     def flatten(self, list_list) :
         return list(chain.from_iterable(list_list))
+
+class NonExistentID(Exception) :
+    pass

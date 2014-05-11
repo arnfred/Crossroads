@@ -16,6 +16,51 @@ body, html, #page, #info_pane {
 }
 
 /*
+ * Search
+ */
+div#search-box {
+    height:100%;
+    width:100%;
+    position:absolute;
+    background-color:#F3F3F3;
+    z-index:2;
+    padding:200px 0;
+}
+
+div#search-box h2 {
+    width:100%;
+    text-align:center;
+}
+
+div#search-box p#search-text {
+    width:100%;
+    text-align:center;
+    color: #555;
+    margin-top:1em;
+}
+
+div#search-results {
+    margin-top:1em;
+    text-align:left;
+}
+
+div#search-results p {
+    margin:0;
+    padding:0;
+}
+div#search-results p.result-author {
+    font-style:italic;
+}
+div.result {
+    margin-left:15px;
+    cursor:pointer;
+    padding:10px;
+}
+div.result:hover {
+    background: #f9f9f9;
+}
+
+/*
  * SVG css
  */
 .node {

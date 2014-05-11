@@ -19,21 +19,13 @@ $def with(paper_id)
 
   <body>
 
+    <!-- search -->
+    <div id="search">
+    </div>
+
     <!-- page -->
     <div id="page" class="row">
 
-      <!-- query-doc-panel -->
-      <div id="query" class="col-md-6 col-md-offset-4">
-        <div class="col-lg-6">
-          <label for="query">Query arXiv paper</label>
-          <div class="input-group">
-            <input type="text" class="form-control" name="query" placeholder="Enter arXiv paper id">
-            <span class="input-group-btn">
-              <button type="button" class="btn btn-default" >Submit</button>
-            </span>
-          </div>
-        </div>
-      </div><!-- /.query-doc-panel -->
 
       <!-- left-panel -->
       <div class="col-md-4 col-md-offset-1">
@@ -45,7 +37,6 @@ $def with(paper_id)
             </div>
           </div>
         </div><!-- /.information-panel --> 
-
       </div><!-- /.left-panel --> 
 
       <!-- right-panel --> 
@@ -69,10 +60,9 @@ $def with(paper_id)
         ractive_fade : "/static/lib/ractive-transitions-fade.min"
         }
     },
-    ["js/graph", "domReady!"],
-    function(graph) {
-	console.debug(graph)
-        graph.update("$paper_id");
+    ["js/search", "js/graph", "domReady!"],
+    function(search, graph) {
+	search.set_graph(graph);
     });
   </script>
   </body>

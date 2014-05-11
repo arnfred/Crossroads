@@ -1,9 +1,7 @@
 import numpy as np
-import scipy
 import sqlite3
 import cPickle
 import tables
-import os
 
 import sklearn.neighbors
 
@@ -17,7 +15,6 @@ import util
 reload(util)
 from util import mystdout
 
-import pdb
 
 
 CATEGORIES_SET = set(['math','cs','q-bio','stat'])
@@ -333,7 +330,7 @@ class Recommender():
         k : int
             Number of words to return
         """
-        return recommender.vocabulary[np.argsort(recommender.topics[topic_id][::-1])][:k]
+        return self.vocabulary[np.argsort(self.topics[topic_id][::-1])][:k]
 
     def get_paper_top_topic(self, paper_id, k):
         """
@@ -346,7 +343,7 @@ class Recommender():
         k : int
             Number of topics to return
         """
-        return np.argsort(recommender.feature_vectors[paper_id][::-1])[:k]
+        return np.argsort(self.feature_vectors[paper_id][::-1])[:k]
 
     def search(self, title="", authors=""):
         return self.cursor.execute("""SELECT id FROM Articles
