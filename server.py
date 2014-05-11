@@ -22,7 +22,6 @@ class index_id:
 # Returns the nearest neighbors of a given id
 class document:
     def GET(self, doc_id, k):
-        print(k)
         return query.center(doc_id, int(k))
 
 # Run the app

@@ -1,15 +1,19 @@
-body, html, #page, #pane {
+body, html, #page, #info_pane {
     height: 100%;
+    background-color:#F3F3F3;
 }
 
 .row {
     margin-right:0;
 }
 
-#graph {
-    height: 100%;
+#query {
+	height: 10%;
 }
 
+#graph {
+    height: 90%;
+}
 
 /*
  * SVG css

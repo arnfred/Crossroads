@@ -1,8 +1,9 @@
-import cPickle
 import numpy as np
 import scipy
 import sqlite3
-# import shelve
+import cPickle
+import tables
+import os
 
 import sklearn.neighbors
 
@@ -26,8 +27,17 @@ class Recommender():
     Content based recommender for arXiv papers based on LDA
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, hdf5_path, db_path):
+        """
+
+        Arguments:
+        hdf5_path : str 
+            Location of the hdf5 file. If it does not exist, it is created
+        db_path : str
+            Location of the db file.
+        """
+        self.h5file = tables.openFile(hdf5_path, mode="a", title="Trailhead - arXiv recommender")
+        self.db_path = db_path
 
     # ====================================================================================================
 
@@ -130,7 +140,7 @@ class Recommender():
                     gamma = self.olda.update_gamma(cur_docset)
 
                     # Keep track of the feature vectors for each documment
-                    self.ids += [j for i,j in result] # ids corresponding to current documents
+                    self.ids += [j.replace('/', '.') for i,j in result] # ids corresponding to current documents
                     self.feature_vectors += self.compute_feature_vectors(gamma, addSmoothing=addSmoothing).tolist()
 
                 mystdout.write("Epoch %d: (%d/%d docs seen), perplexity = %.3f" % \
@@ -138,10 +148,10 @@ class Recommender():
                     iteration, np.ceil(float(self.D)/batch_size))
                 iteration += 1
 
+        # Convert the lists to a Numpy arrays
         self.feature_vectors = np.array(self.feature_vectors)
         self.ids = np.array(self.ids)
         mystdout.write("Online VB LDA done. perplexity = %.3f" % perplexity, 1,1, ln=1)
-
 
     def compute_feature_vectors(self, gamma, addSmoothing=True):
         """
@@ -154,73 +164,7 @@ class Recommender():
             gamma -= self.olda._alpha
             return gamma / np.tile(gamma.sum(axis=1), (gamma.shape[1],1)).T
 
-    def load_feature_vectors(self, filename):
-        """
-        Load the feature vectors and the mapping between feature vectors indices and
-        the documents indices
-
-        Arguments:
-        filename : string
-            Location of the file
-        """
-        try:
-            with open(filename, 'rb') as f:
-                (self.feature_vectors, self.ids) = cPickle.load(f)
-        except IOError:
-            print "File %s not found" % filename
-
-    def save_feature_vectors(self, filename):
-        """
-        Save the feature vectors and the mapping between feature vectors indices and
-        the documents indices
-
-        Arguments:
-        filename : string
-            Location of the file
-        """
-        try:
-            with open(filename, 'wb') as f:
-                cPickle.dump((self.feature_vectors, self.ids),f)
-        except IOError:
-            print "File %s not found" % filename
-
     # ====================================================================================================
-
-    # def build_id_to_title_map(self, filename):
-    #     """
-    #     Build the Id to Title mapping from the arXiv database
-    #     using Shelve lib
-    #     (The database connection needs to be opened)
-
-    #     Arguments:
-    #     filename : string
-    #         Location where the database will be saved
-    #     """
-    #     try:
-    #         result = self.cursor.execute("SELECT id,title FROM Articles").fetchall()
-    #         self.id_to_title_map = shelve.open(filename)
-    #         self.id_to_title_map.update(dict(result))
-    #     except AttributeError:
-    #         print "You should first open the database connection"
-
-    # def load_id_to_title_map(self, filename):
-    #     """
-    #     Load the Id to Title mapping using Shelve lib
-
-    #     Arguments:
-    #     filename : string
-    #         Location of the file
-    #     """
-    #     try:
-    #         self.id_to_title_map = shelve.open(filename)
-    #     except IOError:
-    #         print "File %s not found" % filename
-
-    # def save_id_to_title_map(self):
-    #     """
-    #     Save the Id to Title mapping (using Shelve lib)
-    #     """
-    #     self.id_to_title_map.close()
 
     def get_title(self, paper_id):
         """
@@ -281,7 +225,34 @@ class Recommender():
             print "File %s not found" % filename
 
 
-     # ====================================================================================================
+    # ====================================================================================================
+
+    def build_nearest_neighbors(self, k):
+        """
+        Build the matrix a k nearest neighbors for every paper in the tree
+        """
+
+        N,K = self.feature_vectors[:,:].shape
+        batch_size = 100
+
+        try:
+            self.h5file.createCArray("/", "neighbors_distances", tables.Float64Atom(), shape=(N,k))
+            self.h5file.createCArray("/", "neighbors_indices", tables.UInt64Atom(), shape=(N,k))
+            self.neighbors_distances = self.h5file.root.neighbors_distances
+            self.neighbors_indices = self.h5file.root.neighbors_indices
+        except Exception:
+            self.load("neighbors_distances")
+            self.load("neighbors_indices")
+
+        for i in range(N/batch_size):
+            mystdout.write("Query knn... %d/%d"%(i*batch_size,N), i*batch_size,N)
+            idx = range(i*batch_size, (i+1)*batch_size)
+            distances, indices = self.btree.query(self.feature_vectors[idx,:], k=k+1)
+            self.neighbors_distances[idx,:] = distances[:,1:]
+            self.neighbors_indices[idx,:] = indices[:,1:]
+
+        mystdout.write("Query knn... %d/%d"%(i*batch_size,N), i*batch_size,N, ln=1)
+
 
     # ====================================================================================================
 
@@ -292,16 +263,11 @@ class Recommender():
         self.conn.close()
         self.cursor = None
 
-    def open_db_connection(self, db_path):
+    def open_db_connection(self):
         """
         Open database connection
-
-        Arguments:
-        db_path : string
-            Path to arXiv database
-
         """
-        self.conn = sqlite3.connect(db_path)
+        self.conn = sqlite3.connect(self.db_path)
         self.cursor = self.conn.cursor()
 
     def make_cat_query_condition(self, categories):
@@ -312,28 +278,74 @@ class Recommender():
 
     # ====================================================================================================
 
+    def load_all(self):
+        """
+        Load everything we need
+        """
+        root = self.h5file.root
+        for array in self.h5file.listNodes(root):
+            self.load(array.name)
+            
+    def load(self, attr):
+        """
+        Load an attribute from hdf5 file
+        """
+        setattr(self, attr, getattr(self.h5file.root, attr))
+
+    def save(self, attr):
+        """
+        Save an attribute to the hdf5 file
+        """
+        try:
+            self.h5file.createArray(self.h5file.root, attr, getattr(self, attr))
+        except tables.exceptions.NodeError as e:
+            getattr(self.h5file.root, attr)[:] = getattr(self, attr)
+
+    # ====================================================================================================
+
     def get_nearest_neighbors(self, paper_id, k):
+        """
+        Get the k nearest neighbors for a given paper_id
+
+        Arguments:
+        paper_id : int
+            Id of the paper
+        k : int
+            Number of neighbors to return
+        """
         try:
-            distances, indices = self.btree.query(self.feature_vectors[np.where(self.ids == paper_id)[0][0]], k)
-            return distances[0], indices[0]
+            idx = np.where(self.ids[:] == paper_id)[0][0]
+            distances = self.neighbors_distances[idx,:k]
+            indices = self.neighbors_indices[idx,:k]
+            return distances, indices
         except KeyError:
             print "Unknown paper id: %s" % paper_id
 
+    def get_topic_top_words(self, topic_id, k):
+        """
+        Get the top k words for a given topic (i.e. the ones with highest
+        probability)
+        
+        Arguments:
+        topic_id : int
+            Id of the topic
+        k : int
+            Number of words to return
+        """
+        return recommender.vocabulary[np.argsort(recommender.topics[topic_id][::-1])][:k]
 
-    def print_nearest_neighbors(self, paper_id, k):
-        try:
-            distances, indices = self.get_nearest_neighbors(paper_id, k)
-            for i,(ind,dist) in enumerate(zip(indices,distances)):
-                title = self.id_to_title_map[self.ids[ind]]
-                print "%d)\tdistance: %f\ttitle: %s" % (i, dist, title)
-        except KeyError:
-            print "Unknown paper id: %s" % paper_id
+    def get_paper_top_topic(self, paper_id, k):
+        """
+        Get the top k topics for a given paper (i.e. the ones with highest
+        probability)
+        
+        Arguments:
+        paper_id : int
+            Id of the paper
+        k : int
+            Number of topics to return
+        """
+        return np.argsort(recommender.feature_vectors[paper_id][::-1])[:k]
 
-    def print_topics(self):
-        inverse_voc = {v:k for k, v in self.parser.vocabulary_.items()}
-        arg_to_voc = np.vectorize(lambda i: inverse_voc[i])
-        for k,topic in enumerate(self.olda._lambda):
-            print "===== Topic %d ====="%k
-            print ', '.join(arg_to_voc( topic.argsort()[::-1] )[:10])
-            print ""
+
 
