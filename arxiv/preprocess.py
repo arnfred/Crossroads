@@ -5,17 +5,10 @@ Preprocess articles crawled from arXiv API for LDA
 import re
 import numpy as np
 import itertools
-import sqlalchemy
-import sqlalchemy.types
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, DateTime, Text
-from sqlalchemy.orm import sessionmaker
+import sqlite3
 
 import sklearn.feature_extraction.text as sklearn_fe_text
 import nltk
-
-import database
-from database import Article
 
 stopwords  = set(open('data/stopwords_english.txt', 'ru').read().split(','))
 
@@ -104,7 +97,7 @@ class parser(sklearn_fe_text.CountVectorizer):
 		return ((wordids, wordcts))
 
 
-def create_voc(min_tc, min_df, max_df):
+def create_voc(min_tc, min_df, max_df, db_path, vocabulary_filename):
 	"""
 	Create vocabulary
 
@@ -112,14 +105,18 @@ def create_voc(min_tc, min_df, max_df):
 	min_tc	minimum term count
 	max_df	maximum document frequency
 	"""
+		
+	conn = sqlite3.connect(db_path)
+	c = conn.cursor()
+
 	vectorizer = sklearn_fe_text.CountVectorizer(
 		analyzer=tokenizer,
 		vocabulary=None)
 
 	docs = []
 	print "Query..."
-	for article in database.session.query(Article).order_by(Article.id):
-		docs.append(article.abstract)
+	for title, abstract in c.execute("SELECT title, abstract FROM Articles").fetchall():
+		docs.append(abstract)
 
 	print "Fit transform..."
 	td_sparsemat = vectorizer.fit_transform(docs)
@@ -141,11 +138,21 @@ def create_voc(min_tc, min_df, max_df):
 	inverse_voc = {v:k for k, v in vectorizer.vocabulary_.items()}
 	voc = [inverse_voc[e] for e,i in enumerate(voc_indices) if i == 1]
 	voc.sort()
-	f = open('voc.txt', 'w')
+	f = open(vocabulary_filename, 'w')
 	for word in voc:
 	    f.write(word+u"\n")
 	f.close()
 
-	return td_sparsemat, vectorizer
+	return td_sparsemat, vectorizer, voc
 
 
+if __name__ == "__main__":
+	db_path = '../data/arxiv.db'
+	vocabulary_filename = 'new_voc.txt'
+	min_tc = 10
+	min_df = 0.0001
+	max_df = 0.6
+
+	create_voc(min_tc, min_df, max_df, db_path, vocabulary_filename)
+
+	vocab = open(vocabulary_filename, 'r').read().rstrip('\n').split('\n')

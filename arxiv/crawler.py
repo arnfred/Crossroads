@@ -121,11 +121,10 @@ class Crawler(object):
 
 if __name__ == "__main__":
     # Search query
-    # search_query = 'cat:cs*+OR+cat:math*'
-    search_query = 'cat:q-bio*+OR+cat:stat*'
+    search_query = 'cat:q-bio*+OR+cat:stat*+OR+cat:math*+OR+cat:cs*'
 
-    startDate = datetime.datetime(2000,1,1)
-    endDate = datetime.datetime(2014,3,1)
+    startDate = datetime.datetime(2004,9,1)
+    endDate = datetime.datetime(2014,5,1)
 
     crawler = Crawler()
     crawler.query(search_query, [startDate, endDate])

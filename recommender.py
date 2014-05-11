@@ -36,7 +36,9 @@ class Recommender():
         db_path : str
             Location of the db file.
         """
+        print "Opening file %s..." % hdf5_path
         self.h5file = tables.openFile(hdf5_path, mode="a", title="Trailhead - arXiv recommender")
+
         self.db_path = db_path
 
     # ====================================================================================================
@@ -140,7 +142,7 @@ class Recommender():
                     gamma = self.olda.update_gamma(cur_docset)
 
                     # Keep track of the feature vectors for each documment
-                    self.ids += [j.replace('/', '.') for i,j in result] # ids corresponding to current documents
+                    self.ids += [str(j) for i,j in result] # ids corresponding to current documents
                     self.feature_vectors += self.compute_feature_vectors(gamma, addSmoothing=addSmoothing).tolist()
 
                 mystdout.write("Epoch %d: (%d/%d docs seen), perplexity = %.3f" % \
@@ -177,6 +179,7 @@ class Recommender():
         Return all the data concerning the paper with paper_id in a dictionary where keys are 
         column names and values are the data
         """
+        print "-------- %s ---------" % paper_id
         data = self.cursor.execute("SELECT * FROM Articles WHERE id == ?", (paper_id,)).fetchone()
         names = [row[0] for row in self.cursor.description]
         return dict(zip(names,data))
@@ -267,6 +270,7 @@ class Recommender():
         """
         Open database connection
         """
+        print "Opening db connection to %s" % self.db_path
         self.conn = sqlite3.connect(self.db_path)
         self.cursor = self.conn.cursor()
 
@@ -314,7 +318,7 @@ class Recommender():
             Number of neighbors to return
         """
         try:
-            idx = np.where(self.ids[:] == paper_id)[0][0]
+            idx = np.where(np.array(self.ids[:]) == paper_id)[0][0]
             distances = self.neighbors_distances[idx,:k]
             indices = self.neighbors_indices[idx,:k]
             return distances, indices
@@ -346,6 +350,17 @@ class Recommender():
             Number of topics to return
         """
         return np.argsort(recommender.feature_vectors[paper_id][::-1])[:k]
+
+    def search(self, title="", authors=""):
+        return self.cursor.execute("""SELECT id FROM Articles 
+            WHERE title LIKE ?
+            AND abstract LIKE ?
+            AND authors LIKE ?
+            """, (title, authors)).fetchall()
+
+
+
+
 
 
 
