@@ -36,8 +36,7 @@ class Recommender():
         db_path : str
             Location of the db file.
         """
-        print "Opening file %s..." % hdf5_path
-        self.h5file = tables.open_file(hdf5_path, mode="a", title="Trailhead - arXiv recommender")
+        self.h5file = tables.openFile(hdf5_path, mode="a", title="Trailhead - arXiv recommender")
 
         self.db_path = db_path
 
@@ -179,7 +178,6 @@ class Recommender():
         Return all the data concerning the paper with paper_id in a dictionary where keys are
         column names and values are the data
         """
-        print "-------- %s ---------" % paper_id
         data = self.cursor.execute("SELECT * FROM Articles WHERE id == ?", (paper_id,)).fetchone()
         names = [row[0] for row in self.cursor.description]
         return dict(zip(names,data))
@@ -270,7 +268,6 @@ class Recommender():
         """
         Open database connection
         """
-        print "Opening db connection to %s" % self.db_path
         self.conn = sqlite3.connect(self.db_path)
         self.cursor = self.conn.cursor()
 
