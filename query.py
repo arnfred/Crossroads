@@ -8,7 +8,7 @@ from recommender import Recommender
 
 # Init recommender
 def init_recommender() :
-    recommender = Recommender('data/new_recommender.h5', 'data/arxiv.db')
+    recommender = Recommender('data/recommender.h5', 'data/arxiv.db')
     recommender.load_all()
     return recommender
 recommender = init_recommender()
@@ -117,10 +117,10 @@ class Graph(object) :
         """ Converts the graph to json """
         # Create map of nodes
         nodes = [{
-            'id' : node_id, 
-            'title' : val['title'], 
+            'id' : node_id,
+            'title' : val['title'],
             'abstract' : val['abstract'],
-            'authors' : val['authors'], 
+            'authors' : val['authors'],
             'level' : val['level'],
             'parent_id' : val['parent_id']
             }

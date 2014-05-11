@@ -31,13 +31,13 @@ class Recommender():
         """
 
         Arguments:
-        hdf5_path : str 
+        hdf5_path : str
             Location of the hdf5 file. If it does not exist, it is created
         db_path : str
             Location of the db file.
         """
         print "Opening file %s..." % hdf5_path
-        self.h5file = tables.openFile(hdf5_path, mode="a", title="Trailhead - arXiv recommender")
+        self.h5file = tables.open_file(hdf5_path, mode="a", title="Trailhead - arXiv recommender")
 
         self.db_path = db_path
 
@@ -176,7 +176,7 @@ class Recommender():
 
     def get_data(self, paper_id):
         """
-        Return all the data concerning the paper with paper_id in a dictionary where keys are 
+        Return all the data concerning the paper with paper_id in a dictionary where keys are
         column names and values are the data
         """
         print "-------- %s ---------" % paper_id
@@ -287,9 +287,9 @@ class Recommender():
         Load everything we need
         """
         root = self.h5file.root
-        for array in self.h5file.listNodes(root):
+        for array in self.h5file.list_nodes(root):
             self.load(array.name)
-            
+
     def load(self, attr):
         """
         Load an attribute from hdf5 file
@@ -329,7 +329,7 @@ class Recommender():
         """
         Get the top k words for a given topic (i.e. the ones with highest
         probability)
-        
+
         Arguments:
         topic_id : int
             Id of the topic
@@ -342,7 +342,7 @@ class Recommender():
         """
         Get the top k topics for a given paper (i.e. the ones with highest
         probability)
-        
+
         Arguments:
         paper_id : int
             Id of the paper
@@ -352,7 +352,7 @@ class Recommender():
         return np.argsort(recommender.feature_vectors[paper_id][::-1])[:k]
 
     def search(self, title="", authors=""):
-        return self.cursor.execute("""SELECT id FROM Articles 
+        return self.cursor.execute("""SELECT id FROM Articles
             WHERE title LIKE ?
             AND abstract LIKE ?
             AND authors LIKE ?
