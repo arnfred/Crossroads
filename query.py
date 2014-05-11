@@ -8,7 +8,7 @@ from recommender import Recommender
 
 # Init recommender
 def init_recommender() :
-    recommender = Recommender('data/new_recommender.h5', 'data/arxiv.db')
+    recommender = Recommender('data/recommender.h5', 'data/arxiv.db')
     recommender.load_all()
     return recommender
 recommender = init_recommender()
