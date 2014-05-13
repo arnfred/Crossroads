@@ -15,7 +15,6 @@ from sqlalchemy.exc import IntegrityError
 import feedparser
 
 import database
-reload(database)
 
 BASE_URL = 'http://export.arxiv.org/api/query?' # Base api query url
 WAIT_TIME = 3                                   # number of seconds to wait beetween calls
@@ -77,9 +76,10 @@ class Crawler(object):
             # Iterate over article entries
             for entry in feed['entries']:
                 try:
-                    # Add them to the database
+                    # Parse an entry
                     article = database.Article()
                     article.from_atom_entry(entry)
+                    # Add the article
                     database.session.add(article)
                     database.session.commit()
                     n_fetched += 1

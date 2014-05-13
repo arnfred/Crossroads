@@ -33,7 +33,7 @@ define([
     graph.update = function(paper_id) {
 
         // Load data and start force layout
-        d3.json("/d/" + paper_id + "/" + 5 + "/", function(error, graph_data) {
+        d3.json("/d/" + paper_id + "/" + 8 + "/", function(error, graph_data) {
 
             // Mapping between paper ids and array ids
             graph_idx = _.map(graph_data.nodes, function(n){return n.id});

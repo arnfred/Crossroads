@@ -77,7 +77,7 @@ class Article(Base):
         prim_category = %s, 
         categories = %s
         abs_link = %s,
-        pdf_link = %s>''' % (self.id,
+        pdf_link = %)s>''' % (self.id,
                             self.title[:30]+'...',
                             self.abstract[:30]+'...',
                             str(self.published_at),
