@@ -16,7 +16,6 @@ reload(util)
 from util import mystdout
 
 
-
 CATEGORIES_SET = set(['math','cs','q-bio','stat'])
 
 class Recommender():
