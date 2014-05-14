@@ -5,20 +5,13 @@ import tables
 
 import sklearn.neighbors
 
-import onlineldavb
-reload(onlineldavb)
 from onlineldavb.myonlineldavb import OnlineLDA
-import arxiv
-reload(arxiv)
-from arxiv import preprocess
+from arxiv.preprocess import ArticleParser
 import util
-reload(util)
 from util import mystdout
 
 
-CATEGORIES_SET = set(['math','cs','q-bio','stat'])
-
-class Recommender():
+class ArXivRecommender():
     """
     Content based recommender for arXiv papers based on LDA
     """
@@ -30,17 +23,16 @@ class Recommender():
         hdf5_path : str
             Location of the hdf5 file. If it does not exist, it is created
         db_path : str
-            Location of the db file.
+            Location of the db file
         """
-        self.h5file = tables.openFile(hdf5_path, mode="a", title="Trailhead - arXiv recommender")
-
+        self.h5file = tables.open_file(hdf5_path, mode="a", title="Trailhead - arXiv recommender")
         self.db_path = db_path
 
     # ====================================================================================================
 
-    def train(self, K, voc_filename, batch_size=512, epochs_to_do=2,
+    def train(self, K, vocab_filename, stopwords_filename, batch_size=512, epochs_to_do=2,
         start_date='2000-01-01 00:00:00.000000', end_date='2015-01-01 00:00:00.000000',
-        categories=CATEGORIES_SET, addSmoothing=True):
+        categories=set(), addSmoothing=True):
         """
         Train the recommender based on LDA
 
@@ -61,15 +53,18 @@ class Recommender():
         categories : iterable (default: all categories)
             Categories of papers to process
         """
+        # Open db connection
+        self.open_db_connection()
         # Initialize the parser
-        vocab = open(voc_filename, 'r').read().rstrip('\n').split('\n')
-        self.parser = preprocess.parser(vocab)
+        vocab = open(vocab_filename, 'r').read().rstrip('\n').split('\n')
+        stopwords  = open(stopwords_filename, 'ru').read().split(',')
+        self.parser = ArticleParser(vocab)
         # Start date of documents
         self.start_date = start_date
         # End date of documents
         self.end_date = end_date
         # Categories pattern used in SQL query
-        self.cat_query_condition = self.make_cat_query_condition(categories)
+        self.cat_query_condition = util.make_cat_query_condition(categories)
         # Number of topics
         self.K = K
         # Vocabulary size
@@ -77,7 +72,7 @@ class Recommender():
         # Total number of documents
         self.D = self.cursor.execute("""SELECT COUNT(*) FROM Articles
             WHERE updated_at > '%s' AND updated_at < '%s'
-            AND (%s) """ % \
+            %s """ % \
             (self.start_date, self.end_date, self.cat_query_condition)).fetchone()[0]
         # Initialize the online VB algorithm with alpha=1/K, eta=1/K, tau_0=1024, kappa=0.7
         self.olda = OnlineLDA(self.parser, self.K, self.D, 1./self.K, 1./self.K, 1024., 0.7)
@@ -104,7 +99,7 @@ class Recommender():
             query = self.cursor.execute("""SELECT abstract,id
                 FROM Articles
                 WHERE updated_at > '%s' AND updated_at < '%s'
-                AND (%s)
+                %s
                 ORDER BY updated_at""" % \
                 (self.start_date, self.end_date, self.cat_query_condition))
 
@@ -167,16 +162,33 @@ class Recommender():
         """
         Return the title of the paper with paper_id
         """
-        return self.cursor.execute("SELECT title FROM Articles WHERE id == ?", (paper_id,)).fetchone()
+        self.open_db_connection()
+        try:
+            title = self.cursor.execute("SELECT title FROM Articles WHERE id == ?", (paper_id,)).fetchone()[0]
+        except IndexError:
+            raise UnknownIDException(paper_id)
 
     def get_data(self, paper_id):
         """
         Return all the data concerning the paper with paper_id in a dictionary where keys are
         column names and values are the data
         """
-        data = self.cursor.execute("SELECT * FROM Articles WHERE id == ?", (paper_id,)).fetchone()
-        names = [row[0] for row in self.cursor.description]
-        return dict(zip(names,data))
+        self.open_db_connection()
+        try:
+            data = self.cursor.execute("SELECT * FROM Articles WHERE id == ?", (paper_id,)).fetchone()
+            names = [row[0] for row in self.cursor.description]
+            return dict(zip(names,data))
+        except TypeError:
+            raise UnknownIDException(paper_id)
+
+    def get_papers_from_author(self, author):
+        self.open_db_connection()
+        formatted_author = "%{0}%".format(author)
+        ids = self.cursor.execute("SELECT id FROM Articles WHERE authors LIKE ?", (formatted_author,)).fetchall()
+        if len(ids) == 0:
+            raise UnknownAuthorException(author)
+
+
 
     # ====================================================================================================
 
@@ -221,7 +233,6 @@ class Recommender():
         except IOError:
             print "File %s not found" % filename
 
-
     # ====================================================================================================
 
     def build_nearest_neighbors(self, k):
@@ -250,12 +261,11 @@ class Recommender():
 
         mystdout.write("Query knn... %d/%d"%(i*batch_size,N), i*batch_size,N, ln=1)
 
-
     # ====================================================================================================
 
     def close_db_connection(self):
         """
-        Close database connection (useful to pickle recommender object)
+        Close database connection
         """
         self.conn.close()
         self.cursor = None
@@ -267,11 +277,6 @@ class Recommender():
         self.conn = sqlite3.connect(self.db_path)
         self.cursor = self.conn.cursor()
 
-    def make_cat_query_condition(self, categories):
-        conditions = []
-        for cat in categories:
-            conditions.append("categories LIKE '%{}.%'".format(cat))
-        return ' OR '.join(conditions)
 
     # ====================================================================================================
 
@@ -279,23 +284,24 @@ class Recommender():
         """
         Load everything we need
         """
-        root = self.h5file.root
-        for array in self.h5file.list_nodes(root):
+        group = self.h5file.root.recommender
+        for array in self.h5file.list_nodes(group):
             self.load(array.name)
 
     def load(self, attr):
         """
         Load an attribute from hdf5 file
         """
-        setattr(self, attr, getattr(self.h5file.root, attr))
+        setattr(self, attr, getattr(self.h5file.root.recommender, attr))
 
     def save(self, attr):
         """
         Save an attribute to the hdf5 file
         """
         try:
-            self.h5file.createArray(self.h5file.root, attr, getattr(self, attr))
-        except tables.exceptions.NodeError as e:
+            self.h5file.createArray(self.h5file.root.recommender, attr, getattr(self, attr))
+        except tables.exceptions.NodeError:
+            # If the array already exists, update it
             getattr(self.h5file.root, attr)[:] = getattr(self, attr)
 
     # ====================================================================================================
@@ -344,16 +350,25 @@ class Recommender():
         """
         return np.argsort(self.feature_vectors[paper_id][::-1])[:k]
 
-    def search(self, title="", authors=""):
-        return self.cursor.execute("""SELECT id FROM Articles
-            WHERE title LIKE ?
-            AND abstract LIKE ?
-            AND authors LIKE ?
-            """, (title, authors)).fetchall()
 
+# ========================================================================================================
 
+class UnknownIDException(Exception):
+    """
+    Exception raised if a unknown paper id is queried
+    """
+    def __init__(self, paper_id):
+        self.paper_id = paper_id
 
+    def __str__(self):
+        return repr("UnknownIDException: Unknown paper id %s" % self.paper_id)
 
+class UnknownAuthorException(Exception):
+    """
+    Exception raised if a unknown paper id is queried
+    """
+    def __init__(self, author):
+        self.paper_id = author
 
-
-
+    def __str__(self):
+        return repr("UnknownAuthorException: Unknown author %s" % self.author)

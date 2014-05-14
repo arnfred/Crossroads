@@ -6,18 +6,31 @@ import re
 import numpy as np
 import itertools
 import sqlite3
+import unicodedata
 
 import sklearn.feature_extraction.text as sklearn_fe_text
 import nltk
 
-stopwords  = set(open('data/stopwords_english.txt', 'ru').read().split(','))
+stemmer = nltk.PorterStemmer()
 
-def tokenizer(doc):
+def english_stopwords():
+	global stopwords_english
+	try:
+		return stopwords_english
+	except NameError:
+		stopwords_english = open('recommender/data/stopwords_english.txt', 'r').read().split(',')
+		return stopwords_english
+
+
+def tokenize_doc(doc):
 	"""
 	Preprocess a document and return a list of words
 	"""
+	if type(doc) == unicode:
+		# Normalize doc
+		message = unicodedata.normalize('NFKD', doc).encode('ASCII', 'ignore')
 	# Convert the text to lower case
-	message = doc.lower()
+	message = message.lower()
 	# Replace \n by space
 	message = re.sub('\n', ' ', message)
 	# Remove all math expressions between dollar signs
@@ -31,25 +44,97 @@ def tokenizer(doc):
 	message = re.sub('\d+', '', message)
 	# Split the message in words
 	words = message.split()
-	# Remove stopwordsf = open('voc.txt', 'w')
-	words = [w for w in words if not w in stopwords]
+	# Remove stopwords
+	words = [w for w in words if not w in english_stopwords()]
 	# Remove too short words
 	words = [w for w in words if len(w) > 1]
 	# Stem the words to their root
-	stemmer = nltk.PorterStemmer()
 	words = [stemmer.stem(w) for w in words]
 	return words
 
+def tokenize_author_training(authors_string):
+	authors_list = []
+	authors = authors_string.split('|')
+	for author in authors:
+		# Retrieve all name parts
+		name_parts = author.split(" ")
+		for name in name_parts:
+			# Normalize unicode string to remove accents
+			name = name.lower()
+			name = unicodedata.normalize('NFKD', name).encode('ASCII', 'ignore')
+			authors_list.append(name)
+	return authors_list
 
-class parser(sklearn_fe_text.CountVectorizer):
+def tokenize_author_production(authors_string):
+	authors_list = []
+	authors = authors_string.split(' ')
+	for name in authors:
+		# Normalize unicode string to remove accents
+		name = name.lower()
+		name = unicodedata.normalize('NFKD', name).encode('ASCII', 'ignore')
+		authors_list.append(name)
+	return authors_list
+
+
+
+class ArXivVectorizer(sklearn_fe_text.CountVectorizer):
 	"""
-	Class used to parse arXiv documents
+	Class used to parse authors of arXiv articles
 	"""
 
-	def __init__(self, vocab):
-		super(parser, self).__init__(
-			analyzer=tokenizer,
-			vocabulary=vocab)
+	def __init__(self, category, training=False, vocabulary=None):
+		"""
+		Initialization
+
+		Arguments:
+		category : string ('author' or 'title')
+			Indicate the type of vectorizer for tokenization
+		vocabulary : array_like
+			Indicate the word used for title description or the author names
+			(Mandatory if training is False)
+		"""
+		assert category in ['author','title'], \
+			"Invalid category: choose between 'author' or 'title'"
+		
+		if category == 'author':
+			if training:
+				super(ArXivVectorizer, self).__init__(
+					tokenizer = tokenize_author_training)
+				self.vocabulary_ = {}
+			else:
+				super(ArXivVectorizer, self).__init__(
+					tokenizer = tokenize_author_production,
+					vocabulary = vocabulary)
+		if category == 'title':
+			if training:
+				super(ArXivVectorizer, self).__init__(
+					tokenizer = tokenize_doc)
+			else:
+				super(ArXivVectorizer, self).__init__(
+					tokenizer = tokenize_doc,
+					vocabulary = vocabulary)
+
+
+
+class ArticleParser(sklearn_fe_text.CountVectorizer):
+	"""
+	Class used to parse arXiv articles
+	"""
+
+	def __init__(self, vocab, stopwords):
+		"""
+		Initialize an arXiv paper parser 
+
+		Arguments:
+		vocab : array_like
+			Vocabulary
+		stopwords : array_like
+			Stopwords
+		"""
+		super(ArticleParser, self).__init__(
+			analyzer   = tokenize_doc,
+			vocabulary = vocab,
+			stopwords  = stopwords)
 	
 	def parse_doc_list(self, docs):
 		"""
@@ -97,25 +182,24 @@ class parser(sklearn_fe_text.CountVectorizer):
 		return ((wordids, wordcts))
 
 
-def create_voc(min_tc, min_df, max_df, db_path, vocabulary_filename):
+def build_voc(min_tc, min_df, max_df, cursor):
 	"""
 	Create vocabulary
 
 	Arguments :
 	min_tc	minimum term count
+	min_df  minimum document frequency
 	max_df	maximum document frequency
+	cursor  sqlite3 connection cursor
 	"""
 		
-	conn = sqlite3.connect(db_path)
-	c = conn.cursor()
-
 	vectorizer = sklearn_fe_text.CountVectorizer(
 		analyzer=tokenizer,
 		vocabulary=None)
 
 	docs = []
 	print "Query..."
-	for title, abstract in c.execute("SELECT title, abstract FROM Articles").fetchall():
+	for title, abstract in cursor.execute("SELECT title, abstract FROM Articles").fetchall():
 		docs.append(abstract)
 
 	print "Fit transform..."
@@ -138,21 +222,22 @@ def create_voc(min_tc, min_df, max_df, db_path, vocabulary_filename):
 	inverse_voc = {v:k for k, v in vectorizer.vocabulary_.items()}
 	voc = [inverse_voc[e] for e,i in enumerate(voc_indices) if i == 1]
 	voc.sort()
-	f = open(vocabulary_filename, 'w')
-	for word in voc:
-	    f.write(word+u"\n")
-	f.close()
 
 	return td_sparsemat, vectorizer, voc
 
 
 if __name__ == "__main__":
 	db_path = '../data/arxiv.db'
-	vocabulary_filename = 'new_voc.txt'
-	min_tc = 10
-	min_df = 0.0001
-	max_df = 0.6
+	conn = sqlite3.connect(db_path)
+	cursor = conn.cursor()
 
-	create_voc(min_tc, min_df, max_df, db_path, vocabulary_filename)
-
-	vocab = open(vocabulary_filename, 'r').read().rstrip('\n').split('\n')
+	# db_path = '../data/arxiv.db'
+	# vocabulary_filename = 'new_voc.txt'
+	# min_tc = 10
+	# min_df = 0.0001
+	# max_df = 0.6
+	# voc = build_voc(min_tc, min_df, max_df, cursor)
+	# f = open(vocabulary_filename, 'w')
+	# for word in voc:
+	#     f.write(word+u"\n")
+	# f.close()

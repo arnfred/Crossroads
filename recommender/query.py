@@ -1,30 +1,8 @@
 import json
 from itertools import chain
 
-import recommender
-reload(recommender)
-from recommender import Recommender
 
-
-# Init recommender
-def init_recommender() :
-    recommender = Recommender('data/recommender.h5', 'data/arxiv.db')
-    recommender.load_all()
-    return recommender
-recommender = init_recommender()
-
-
-def get(paper_id) :
-    recommender.open_db_connection()
-    try :
-        return recommender.get_data(paper_id)
-    except Exception as e :
-        print(e)
-        raise NonExistentID(paper_id)
-
-
-
-def center(paper_id, k) :
+def center(recommender, paper_id, k) :
     """
     return a graph with the k nearest neighbors of the paper_id
 
@@ -39,15 +17,14 @@ def center(paper_id, k) :
         json graph as specified in the Graph class
     """
     global graph
-    recommender.open_db_connection()
     graph = Graph(recommender.get_data)
     # Populate graph
     if paper_id != "":
-        graph_walk(graph, [(paper_id, 0)], k = k, visited = {})
+        graph_walk(recommender, graph, [(paper_id, 0)], k = k, visited = {})
     return graph.to_JSON()
 
 
-def graph_walk(graph, to_visit = [], k = 5, max_level = 2, visited = {}) :
+def graph_walk(recommender, graph, to_visit = [], k = 5, max_level = 1, visited = {}) :
     """ Given a paper id, we find the nearest neighbors and add them to the
     graph, then find the nearest neighbors of these and add those to the graph
     recursing k steps down """
@@ -145,5 +122,3 @@ class Graph(object) :
     def flatten(self, list_list) :
         return list(chain.from_iterable(list_list))
 
-class NonExistentID(Exception) :
-    pass
