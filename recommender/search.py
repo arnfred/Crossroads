@@ -9,6 +9,7 @@ import sqlite3
 import numpy as np
 from scipy import sparse
 import tables
+import time
 
 import query
 from recommender import UnknownIDException
@@ -145,6 +146,9 @@ class ArXivSearchEngine(object):
                "authors" : ["Mr. Ding Dong", "Dr. Swim Swam"]}
             ]
         """
+        start_time = time.time()
+
+        self.recommender.open_db_connection()
 
         # === First check if we have a valid ID in which case only return that result
         terms = search_input.split(" ")
@@ -169,7 +173,6 @@ class ArXivSearchEngine(object):
         # === If a term did match an author, search only papers by this author
         # and return results where the title matches any of the terms
         related_papers = set()
-        print "Matched ->"
         if len(author_result) > 0 and len(title_result) > 0:
             related_papers = set.intersection(author_result, title_result)
         else:
@@ -188,5 +191,8 @@ class ArXivSearchEngine(object):
                 "authors" : data["authors"].split("|")
                 })
 
-        return json.dumps(related_papers_data)
+        # Compute search query duration in seconds
+        duration = "{:.2f}".format(time.time() - start_time)
+
+        return json.dumps({"data":related_papers_data, "duration":duration})
 

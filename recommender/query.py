@@ -16,6 +16,7 @@ def center(recommender, paper_id, k) :
     Returns:
         json graph as specified in the Graph class
     """
+    recommender.open_db_connection()
     global graph
     graph = Graph(recommender.get_data)
     # Populate graph

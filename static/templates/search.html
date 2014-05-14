@@ -11,8 +11,13 @@
 		{{ ^results }}
 		<p id="search-text">Search by entering a keyword, an author or an arXiv id</p>
 		{{ /results }}
-
+		{{ #results_shown }}
+		<p class="result-header">{{ length }} results found (in {{ duration }} seconds)</p>
+		{{ /results_shown }}
 		<div id="search-results">
+			{{ #no_result }}
+			<p> No result found for this query </p>
+			{{ /no_result }}
 			{{ #results }}
 			<div class="result" on-click="goto-graph">
 				<p class="result-title">{{ title }}</p>
@@ -20,6 +25,23 @@
 			</div>
 			{{ /results }}
 		</div>
+	<div class="col-md-12 text-center">
+		<ul id="pager" class="pagination">
+		  {{ #results_shown }}
+		  <li class='{{ is_first_page ? "pagin-button disabled" : "pagin-button"}}'>
+		  	<a href="#" class='{{ !is_first_page ? "pagin" : ""}}' on-click="first">First</a>
+		  </li>
+		  <li class='{{ is_first_page ? "pagin-button disabled" : "pagin-button"}}'>
+		  	<a href="#" class='{{ !is_first_page ? "pagin" : ""}}' on-click="previous">Previous</a></li>
+		  <li class='{{ is_last_page ? "pagin-button disabled" : "pagin-button"}}'>
+		  	<a href="#" class='{{ !is_last_page ? "pagin" : ""}}' on-click="next">Next</a>
+		  </li>
+		  <li class='{{ is_last_page ? "pagin-button disabled" : "pagin-button"}}'>
+		  	<a href="#" class='{{ !is_last_page ? "pagin" : ""}}' on-click="last">Last</a>
+		  </li>
+		  {{ /results_shown }}
+		</ul>
+	</div>
 
 	</div>
 </div>

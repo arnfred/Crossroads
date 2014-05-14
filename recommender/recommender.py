@@ -173,7 +173,6 @@ class ArXivRecommender():
         Return all the data concerning the paper with paper_id in a dictionary where keys are
         column names and values are the data
         """
-        self.open_db_connection()
         try:
             data = self.cursor.execute("SELECT * FROM Articles WHERE id == ?", (paper_id,)).fetchone()
             names = [row[0] for row in self.cursor.description]

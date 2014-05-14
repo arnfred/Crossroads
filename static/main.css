@@ -54,15 +54,27 @@ div#search-results p.result-author {
 div#search-results p.result-title {
     font-weight:bold;
 }
+div p.result-header {
+    text-align:center;
+    font-size: 80%;
+}
+div#search-results p.result-footer {
+    text-align:center;
+    height:10%;
+}
 div.result {
     margin-left:15px;
     cursor:pointer;
     padding:10px;
 }
+
 div.result:hover {
     background: #f1f1f1;
 }
 
+#pager .pagin-button .pagin {
+    color:black;
+}
 /*
  * SVG css
  */
