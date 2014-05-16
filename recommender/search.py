@@ -154,13 +154,14 @@ class ArXivSearchEngine(object):
         terms = search_input.split(" ")
         if len(terms) == 1 :
             try :
-                paper_id = str(terms[0].strip())
+                paper_id = terms[0].strip()
                 data = self.recommender.get_data(paper_id)
-                return json.dumps([{
+                data = [{
                     "id" : paper_id,
                     "title" : data["title"],
                     "authors" : data["authors"]
-                }])
+                }]
+                return json.dumps({'data':data, 'duration':0.0})
             except UnknownIDException :
                 pass
 

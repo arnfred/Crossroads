@@ -16,7 +16,7 @@ class ArXivRecommender():
     Content based recommender for arXiv papers based on LDA
     """
 
-    def __init__(self, hdf5_path, db_path):
+    def __init__(self, hdf5_path, db_path, mode="r"):
         """
 
         Arguments:
@@ -25,7 +25,7 @@ class ArXivRecommender():
         db_path : str
             Location of the db file
         """
-        self.h5file = tables.open_file(hdf5_path, mode="a", title="Trailhead - arXiv recommender")
+        self.h5file = tables.open_file(hdf5_path, mode=mode, title="Trailhead - arXiv recommender")
         self.db_path = db_path
 
     # ====================================================================================================
