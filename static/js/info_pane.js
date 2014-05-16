@@ -24,9 +24,6 @@ define(["ractive", "lib/underscore", "text!templates/info_pane.html"], function(
 	//                                    //
 	////////////////////////////////////////
 
-	view.events = function() {
-        // TODO
-    }
 
 	////////////////////////////////////////
 	//                                    //
