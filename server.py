@@ -6,7 +6,7 @@ from recommender.recommender import ArXivRecommender
 
 # Define pages
 urls = (
-  '/d/(.[a-z0-9\.]*)/([0-9]*)/', 'document',
+  '/d/(.[a-z0-9\./]*)-([0-9]*)/', 'document',
   '/', 'index',
   '/search/(.*)', 'search_query',
   '/(.[a-z0-9\.]*)/', 'index_id'
@@ -45,7 +45,7 @@ class search_query :
 
 
 # Run the app
-if __name__ == "__main__" :    
+if __name__ == "__main__" :
     app = web.application(urls, globals())
     app.run()
 
