@@ -10,4 +10,5 @@ numexpr==2.3
 numpy==1.8.1
 scikit-learn==0.14.1
 tables==3.1.1
+scipy==0.13.3
 
