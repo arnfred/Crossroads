@@ -31,13 +31,13 @@ define(["ractive", "lib/underscore", "text!templates/info_pane.html"], function(
 	//                                    //
 	////////////////////////////////////////
 
-    view.display = function(node) {
-		view.set("id", node.id);
-		view.set("title", node.title);
-		view.set("abstract", node.abstract);
-		view.set("authors", node.authors)
-		view.set("paper", true);
-    }
+	view.display = function(node) {
+	    view.set("id", node.id);
+	    view.set("title", node.title);
+	    view.set("abstract", node.abstract);
+	    view.set("authors", node.authors)
+	    view.set("paper", true);
+	}
 
 	////////////////////////////////////////
 	//                                    //
@@ -45,6 +45,6 @@ define(["ractive", "lib/underscore", "text!templates/info_pane.html"], function(
 	//                                    //
 	////////////////////////////////////////
 
-	view.events();
+	//view.events();
 	return view;
 });

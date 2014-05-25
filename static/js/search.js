@@ -9,7 +9,7 @@ define(["lib/d3.v3.min", "lib/jquery", "ractive", "text!templates/search.html"],
 
     var search = {}
 
-    var perPage = 5; 
+    var perPage = 5;
     var numItems = undefined;
     var numPages = undefined;
     var currPage = 0;
@@ -89,6 +89,7 @@ define(["lib/d3.v3.min", "lib/jquery", "ractive", "text!templates/search.html"],
 
     // Set graph
     search.set_graph = function(graph) {
+	console.debug("here")
 	search.graph = graph;
     }
 
@@ -131,9 +132,9 @@ define(["lib/d3.v3.min", "lib/jquery", "ractive", "text!templates/search.html"],
 
     var show_results = function(search_result) {
         numItems = search_result.data.length;
-        numPages = Math.ceil(numItems/perPage);  
+        numPages = Math.ceil(numItems/perPage);
         currPage = 0;
-             
+
         search.view.set("length", data.length);
         search.view.set("duration", search_result.duration);
         search.view.set("results_shown", true);
@@ -141,7 +142,7 @@ define(["lib/d3.v3.min", "lib/jquery", "ractive", "text!templates/search.html"],
         search.view.set("is_last_page", currPage == numPages-1);
         search.view.set("currPage", 1);
         search.view.set("numPages", numPages);
-        
+
         goTo(currPage);
     }
 
@@ -155,8 +156,6 @@ define(["lib/d3.v3.min", "lib/jquery", "ractive", "text!templates/search.html"],
 
     function goTo(page){
         currPage = page;
-        console.debug(currPage*perPage);
-        console.debug((currPage+1)*perPage);
         search.view.set("is_first_page", currPage == 0);
         search.view.set("is_last_page", currPage == numPages-1);
         search.view.set("results", data.slice(currPage*perPage,(currPage+1)*perPage));
