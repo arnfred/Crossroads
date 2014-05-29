@@ -28,9 +28,9 @@ def tokenize_doc(doc):
 	"""
 	if type(doc) == unicode:
 		# Normalize doc
-		message = unicodedata.normalize('NFKD', doc).encode('ASCII', 'ignore')
+		doc = unicodedata.normalize('NFKD', doc).encode('ASCII', 'ignore')
 	# Convert the text to lower case
-	message = message.lower()
+	message = doc.lower()
 	# Replace \n by space
 	message = re.sub('\n', ' ', message)
 	# Remove all math expressions between dollar signs
