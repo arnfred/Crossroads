@@ -11,16 +11,9 @@ import unicodedata
 import sklearn.feature_extraction.text as sklearn_fe_text
 import nltk
 
+from .stop_words import ENGLISH_STOP_WORDS
+
 stemmer = nltk.PorterStemmer()
-
-def english_stopwords():
-	global stopwords_english
-	try:
-		return stopwords_english
-	except NameError:
-		stopwords_english = open('recommender/data/stopwords_english.txt', 'r').read().split(',')
-		return stopwords_english
-
 
 def tokenize_doc(doc):
 	"""
@@ -45,7 +38,7 @@ def tokenize_doc(doc):
 	# Split the message in words
 	words = message.split()
 	# Remove stopwords
-	words = [w for w in words if not w in english_stopwords()]
+	words = [w for w in words if not w in ENGLISH_STOP_WORDS]
 	# Remove too short words
 	words = [w for w in words if len(w) > 1]
 	# Stem the words to their root
@@ -194,7 +187,7 @@ def build_voc(min_tc, min_df, max_df, cursor):
 	"""
 		
 	vectorizer = sklearn_fe_text.CountVectorizer(
-		analyzer=tokenizer,
+		analyzer=tokenize_doc,
 		vocabulary=None)
 
 	docs = []
@@ -224,20 +217,3 @@ def build_voc(min_tc, min_df, max_df, cursor):
 	voc.sort()
 
 	return td_sparsemat, vectorizer, voc
-
-
-if __name__ == "__main__":
-	db_path = '../data/arxiv.db'
-	conn = sqlite3.connect(db_path)
-	cursor = conn.cursor()
-
-	# db_path = '../data/arxiv.db'
-	# vocabulary_filename = 'new_voc.txt'
-	# min_tc = 10
-	# min_df = 0.0001
-	# max_df = 0.6
-	# voc = build_voc(min_tc, min_df, max_df, cursor)
-	# f = open(vocabulary_filename, 'w')
-	# for word in voc:
-	#     f.write(word+u"\n")
-	# f.close()
