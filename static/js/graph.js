@@ -18,7 +18,7 @@ define([
         links = [];
 
     var colors = function(e) {
-        i = colorbrewer['YlGnBu'][4];
+        i = colorbrewer['YlGnBu'][3];
         return i[e]
     };
 

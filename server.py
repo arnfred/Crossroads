@@ -40,7 +40,7 @@ class document :
 
 class search_query :
     def GET(self, decoded_terms) :
-        search_input = urllib.unquote(decoded_terms).decode('utf8')
+        search_input = urllib.unquote(decoded_terms)
         return search_engine.query(search_input)
 
 
