@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.sparse as scsp
 import sqlite3
 import cPickle
 import tables
@@ -323,6 +324,38 @@ class ArXivRecommender():
         except KeyError:
             print "Unknown paper id: %s" % paper_id
 
+
+    def get_nearest_neighbors_online(self, paper_id, k, metric='jaccard-euclidean', percentile=1.0):
+        """
+        Get the k nearest neighbors for a given paper_id by computing them online
+        based on some metric
+        """
+        try:
+            # Id of paper in feature vector matrix
+            idx = np.where(np.array(self.ids[:]) == paper_id)[0][0]
+            # Top topics for this paper
+            topics = self.get_top_topics(idx, float(percentile))
+            N = len(topics)
+
+            this_jaccard = scsp.coo_matrix(
+                (
+                    np.ones(N),
+                    (
+                        np.zeros(N),
+                        topics
+                    ),
+                ), shape=[1, self.feature_vectors.shape[1]])
+
+            # Top topics of all papers
+            others_top = np.sum( 
+                np.cumsum(np.sort(self.feature_vectors[:], axis=1)[:,::-1], axis=1) < percentile,
+                axis=1)
+        
+        except KeyError:
+            print "Unknown paper id: %s" % paper_id
+
+    # ====================================================================================================
+
     def get_topic_top_words(self, topic_id, k):
         """
         Get the top k words for a given topic (i.e. the ones with highest
@@ -336,18 +369,23 @@ class ArXivRecommender():
         """
         return self.vocabulary[np.argsort(self.topics[topic_id][::-1])][:k]
 
-    def get_paper_top_topic(self, paper_id, k):
+    def get_top_topics(self, idx, k):
         """
         Get the top k topics for a given paper (i.e. the ones with highest
         probability)
 
         Arguments:
-        paper_id : int
+        idx : int
             Id of the paper
-        k : int
-            Number of topics to return
+        k : int or fload
+            if a int is provided: Number of topics to return
+            if a float is provided: portion of topics (in probability) to return
         """
-        return np.argsort(self.feature_vectors[paper_id][::-1])[:k]
+        if type(k) is int:
+            return np.argsort(self.feature_vectors[idx])[::-1][:k]
+        elif type(k) is float:
+            n = sum( np.cumsum(np.sort(self.feature_vectors[idx])[::-1]) < k)
+            return np.argsort(self.feature_vectors[idx])[::-1][:n]
 
 
 # ========================================================================================================
