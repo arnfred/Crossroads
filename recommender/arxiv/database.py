@@ -22,7 +22,7 @@ IDREGEX = re.compile(r'v[0-9]+$')
 
 # Declare stuff for sqlachemy ORM
 # engine = sqlalchemy.create_engine('sqlite:////Volumes/MyPassport/data/arxiv.db')
-engine = sqlalchemy.create_engine('sqlite:///arxiv.db')
+engine = sqlalchemy.create_engine('sqlite:///../data/arxiv.db')
 Session = sessionmaker(bind=engine)
 session = Session()
 Base = declarative_base()

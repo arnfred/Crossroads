@@ -9,12 +9,15 @@ from dateutil import rrule
 from dateutil.relativedelta import relativedelta
 import time
 import re
+import os
 import sqlalchemy
 from sqlalchemy.exc import IntegrityError
 
 import feedparser
 
 import database
+from database import Article
+from sqlalchemy import desc
 
 BASE_URL = 'http://export.arxiv.org/api/query?' # Base api query url
 WAIT_TIME = 3                                   # number of seconds to wait beetween calls
@@ -27,7 +30,7 @@ feedparser._FeedParserMixin.namespaces['http://a9.com/-/spec/opensearch/1.1/'] =
 feedparser._FeedParserMixin.namespaces['http://arxiv.org/schemas/atom'] = 'arxiv'
 
 
-class Crawler(object):
+class MetadataCrawler(object):
 
     def _execute_query(self, search_query, start=0, sortBy='lastUpdatedDate', sortOrder='ascending', minDate='000000000000', maxDate='999999999999'):
         """
@@ -119,13 +122,49 @@ class Crawler(object):
                 print "Query[%s, %s]: %d articles fetched (%d in total), %d errors (%d in total)" % (minDate.strftime("%Y-%m-%d"), maxDate.strftime("%Y-%m-%d"), n_fetched, n_fetched_tot, n_errors, n_errors_tot)
 
 
+class FulltextCrawler(object):
+
+    def query(self, datetimeRange=[datetime.datetime(1991,01,01),datetime.datetime.now()]):
+
+        prefix = '/Volumes/MyPassport/data/pdf/'
+        suffix = '.pdf'
+        
+        existing_pdfs = set([e.rstrip('.pdf') for e in os.listdir(prefix) if e.endswith('.pdf')])
+
+        for link, in database.session.query(Article.pdf_link).\
+                        filter(Article.updated_at > datetimeRange[0], Article.updated_at < datetimeRange[1]).\
+                        order_by(desc(Article.updated_at)):
+            filename = link.split('/')[-1]
+            if filename not in existing_pdfs:
+                start_time = time.time()
+                print "Downloading %s..." % filename
+                remote_file = urllib.urlopen(link)
+                data = remote_file.read()
+                if data.startswith('%PDF'):
+                    f = open(prefix+filename+suffix, 'w')
+                    f.write(data)
+                    f.close()
+                else:
+                    print "Error: link %s is not a pdf!" % (prefix+filename+suffix)
+                time.sleep(max(0, WAIT_TIME-time.time()+start_time))
+
+
+
+
+            
+
+
+
 if __name__ == "__main__":
-    # Search query
-    search_query = 'cat:q-bio*+OR+cat:stat*+OR+cat:math*+OR+cat:cs*'
+    # # Search query
+    # search_query = 'cat:q-bio*+OR+cat:stat*+OR+cat:math*+OR+cat:cs*'
 
-    startDate = datetime.datetime(2004,9,1)
-    endDate = datetime.datetime(2014,5,1)
+    # startDate = datetime.datetime(2004,9,1)
+    # endDate = datetime.datetime(2014,5,1)
 
-    crawler = Crawler()
-    crawler.query(search_query, [startDate, endDate])
+    # crawler = MetadataCrawler()
+    # crawler.query(search_query, [startDate, endDate])
+
+    crawler = FulltextCrawler()
+    links = crawler.query()
 
