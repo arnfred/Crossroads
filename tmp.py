@@ -1,8 +1,12 @@
+import scipy.sparse as scsp
+import numpy as np
+
 import recommender
 reload(recommender)
 from recommender import query, search
 from recommender.recommender import ArXivRecommender
-import numpy as np
+
+
 
 # Init recommender
 def init_recommender() :
@@ -13,10 +17,8 @@ recommender = init_recommender()
 
 
 self = recommender
-idx = np.where(np.array(self.ids[:]) == '1402.1774')[0][0]
-
+paper_id = '1402.1774'
+k = 40
 percentile = 0.8
-others_top = np.sum( 
-	np.cumsum(np.sort(self.feature_vectors[:], axis=1)[:,::-1], axis=1) < percentile,
-	axis=1)
-others = np.argsort(self.feature_vectors[:], axis=1)[:,::-1]
+
+distances, indices = recommender.get_nearest_neighbors_online(paper_id, k, percentile=percentile)

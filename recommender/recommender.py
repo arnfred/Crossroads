@@ -333,23 +333,50 @@ class ArXivRecommender():
         try:
             # Id of paper in feature vector matrix
             idx = np.where(np.array(self.ids[:]) == paper_id)[0][0]
-            # Top topics for this paper
-            topics = self.get_top_topics(idx, float(percentile))
-            N = len(topics)
+            M = self.feature_vectors.shape[0]
 
+            # Jaccard feature vector for this paper, containing its top topics
+            this_top = self.get_top_topics(idx, float(percentile))
+            N = len(this_top)
             this_jaccard = scsp.coo_matrix(
                 (
                     np.ones(N),
                     (
-                        np.zeros(N),
-                        topics
+                        this_top,                        
+                        np.zeros(N)
                     ),
-                ), shape=[1, self.feature_vectors.shape[1]])
+                ), shape=[self.feature_vectors.shape[1], 1], dtype=np.bool_)
 
-            # Top topics of all papers
-            others_top = np.sum( 
-                np.cumsum(np.sort(self.feature_vectors[:], axis=1)[:,::-1], axis=1) < percentile,
-                axis=1)
+            # Compute data to build the sparse matrix of top topics for all papers
+            others_top = np.sum(np.cumsum(np.sort(self.feature_vectors[:], axis=1)[:,::-1], axis=1) \
+                < percentile, axis=1)
+            others = np.argsort(self.feature_vectors[:], axis=1)[:,::-1]
+            others_col = []
+            for i,t in enumerate(others_top):
+                others_col += others[i,:t].tolist()
+            others_row = np.repeat(np.arange(0,M), others_top)
+            others_data = np.ones(others_top.sum())
+            others_jaccard = scsp.coo_matrix(
+                            (
+                                others_data,
+                                (
+                                    others_row,
+                                    others_col
+                                ),
+                            ), shape=self.feature_vectors.shape, dtype=np.bool_)
+            del others, others_top, others_data, others_row, others_col
+
+            # Compute jaccard distances with all other papers
+            jaccard_distances = np.dot(others_jaccard, this_jaccard).toarray().T[0]
+            
+            # Compute the euclidean distance for all the closest neighbors found via jaccard distance
+            jaccard_indices = np.arange(M)[jaccard_distances == jaccard_distances.max()]
+            distances = np.sum((self.feature_vectors[jaccard_indices,:] - np.tile(self.feature_vectors[idx], \
+                (len(jaccard_indices),1)))**2, axis=1)
+            indices = np.argsort(distances)[::-1][:k]
+            distances = np.sort(distances)[::-1][:k]
+
+            return distances, indices
         
         except KeyError:
             print "Unknown paper id: %s" % paper_id
