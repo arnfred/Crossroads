@@ -34,7 +34,7 @@ def graph_walk(recommender, graph, to_visit = [], k = 5, max_level = 1, visited 
         parent_id, level = to_visit.pop()
         visited[parent_id] = True
         graph.add(parent_id, parent_id, 0.0, 1)
-        distances, indices = recommender.get_nearest_neighbors(parent_id, k)
+        distances, indices = recommender.get_nearest_neighbors_authors(parent_id, k)
         for dist, node_id in zip(distances, recommender.ids[indices]) :
             # Anyway, add node to graph (if it exists, the new link is added)
             graph.add(node_id, parent_id, dist, level + 1)

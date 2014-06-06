@@ -45,7 +45,7 @@ def tokenize_doc(doc):
 	words = [stemmer.stem(w) for w in words]
 	return words
 
-def tokenize_author_training(authors_string):
+def search_tokenize_author_training(authors_string):
 	authors_list = []
 	authors = authors_string.split('|')
 	for author in authors:
@@ -58,7 +58,7 @@ def tokenize_author_training(authors_string):
 			authors_list.append(name)
 	return authors_list
 
-def tokenize_author_production(authors_string):
+def search_tokenize_author_production(authors_string):
 	authors_list = []
 	authors = authors_string.split(' ')
 	for name in authors:
@@ -68,11 +68,40 @@ def tokenize_author_production(authors_string):
 		authors_list.append(name)
 	return authors_list
 
+def recommender_tokenize_author(authors_string):
+	authors_list = []
+	authors = authors_string.split('|')
+	for author in authors:
+		# Normalize unicode string to remove accents
+		author = author.lower()
+		author = unicodedata.normalize('NFKD', author).encode('ASCII', 'ignore')
+		author = author.split(' ')
+		first = author[0]
+		last = author[-1]
+		authors_list.append(last+'_'+first[0])
+	return authors_list
 
 
-class ArXivVectorizer(sklearn_fe_text.CountVectorizer):
+class AuthorVectorizer(sklearn_fe_text.CountVectorizer):
 	"""
-	Class used to parse authors of arXiv articles
+	Class used to parse raw authors from arXiv articles
+	"""
+	def __init__(self, vocabulary):
+		"""
+		Initialization
+
+		Arguments:
+		vocabulary : array_like
+			Indicate the authors used in the vectorizer
+		"""
+		super(AuthorVectorizer, self).__init__(
+			tokenizer = recommender_tokenize_author,
+			vocabulary = vocabulary)
+
+class SearchVectorizer(sklearn_fe_text.CountVectorizer):
+	"""
+	Class used for the search engine to parse authors or titles 
+	of arXiv articles
 	"""
 
 	def __init__(self, category, training=False, vocabulary=None):
@@ -87,23 +116,23 @@ class ArXivVectorizer(sklearn_fe_text.CountVectorizer):
 			(Mandatory if training is False)
 		"""
 		assert category in ['author','title'], \
-			"Invalid category: choose between 'author' or 'title'"
+			"Invalid category: choose between 'author' and 'title'"
 		
 		if category == 'author':
 			if training:
-				super(ArXivVectorizer, self).__init__(
-					tokenizer = tokenize_author_training)
+				super(SearchVectorizer, self).__init__(
+					tokenizer = search_tokenize_author_training)
 				self.vocabulary_ = {}
 			else:
-				super(ArXivVectorizer, self).__init__(
-					tokenizer = tokenize_author_production,
+				super(SearchVectorizer, self).__init__(
+					tokenizer = search_tokenize_author_production,
 					vocabulary = vocabulary)
 		if category == 'title':
 			if training:
-				super(ArXivVectorizer, self).__init__(
+				super(SearchVectorizer, self).__init__(
 					tokenizer = tokenize_doc)
 			else:
-				super(ArXivVectorizer, self).__init__(
+				super(SearchVectorizer, self).__init__(
 					tokenizer = tokenize_doc,
 					vocabulary = vocabulary)
 

@@ -14,7 +14,7 @@ import time
 import query
 from recommender import UnknownIDException
 import util
-from arxiv.preprocess import ArXivVectorizer
+from arxiv.preprocess import SearchVectorizer
 from util import mystdout
 
 
@@ -23,8 +23,8 @@ def train_search(recommender, start_date, end_date, categories):
     Train the search engine for a given recommender and save search data into 
     its hdf5 file
     """
-    author_vectorizer = ArXivVectorizer(category = 'author', training=True)
-    title_vectorizer = ArXivVectorizer(category = 'title', training=True) 
+    author_vectorizer = SearchVectorizer(category = 'author', training=True)
+    title_vectorizer = SearchVectorizer(category = 'title', training=True) 
 
     # Categories pattern used in SQL query
     cat_query_condition = util.make_cat_query_condition(categories)
@@ -92,7 +92,7 @@ class ArXivSearchEngine(object):
         # Load author matrix
         self.author_matrix = util.load_sparse_mat('author_matrix', recommender.h5file, recommender.h5file.root.search)
         # Initialize author vectorizer
-        self.author_vectorizer = ArXivVectorizer(
+        self.author_vectorizer = SearchVectorizer(
             category = 'author',
             vocabulary = recommender.h5file.root.search.author_list[:])
 
@@ -100,7 +100,7 @@ class ArXivSearchEngine(object):
         # Load title matrix
         self.title_matrix = util.load_sparse_mat('title_matrix', recommender.h5file, recommender.h5file.root.search)
         # Initialize title vectorizer
-        self.title_vectorizer = ArXivVectorizer(
+        self.title_vectorizer = SearchVectorizer(
             category = 'title',
             vocabulary = recommender.h5file.root.search.title_list[:])
 
