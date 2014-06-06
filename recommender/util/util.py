@@ -35,7 +35,6 @@ def store_sparse_mat(mat, name, h5file, group):
 			n._f_remove()
 		except AttributeError:
 			pass
-
 		arr = np.array(getattr(mat, par))
 		atom = tables.Atom.from_dtype(arr.dtype)
 		shape = arr.shape
@@ -55,7 +54,6 @@ def store_carray(arr, name, h5file, group):
 		n._f_remove()
 	except AttributeError:
 		pass
-
 	atom = tables.Atom.from_dtype(arr.dtype)
 	shape = arr.shape
 	ds = h5file.create_carray(group, name, atom, shape)

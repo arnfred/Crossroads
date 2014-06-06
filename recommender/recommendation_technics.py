@@ -21,13 +21,29 @@ class RecommendationInterface(object):
 	Every object deals directly with the arXiv database 
 	and is linked to a hdf5 file opened by its parent
 	"""
-
 	def __init__(self, h5file, db_path):
 		self.h5file = h5file
 		self.db_path = db_path
 
-	def get_nearest_neighbors(self):
+	def train(self):
+		"""
+		Train the recommendation method with the data (i.e. build feature vectors)
+		"""
+		raise NotImplementedError( "train not implemented for %s" % self.__class__ )
+
+	def build_nearest_neighbors(self):
+		"""
+		Compute the nearest neighbors for all articles from the feature vectors
+		"""
+		raise NotImplementedError( "train not implemented for %s" % self.__class__ )
+
+	def get_nearest_neighbors(self, paper_id, k):
+		"""
+		Query for the k nearest neighbors of article paper_id
+		"""
 		raise NotImplementedError( "get_nearest_neighbors not implemented for %s" % self.__class__ )
+
+	# ====================================================================================================
 
 	def close_db_connection(self):
 		"""
@@ -43,12 +59,45 @@ class RecommendationInterface(object):
 		self.conn = sqlite3.connect(self.db_path)
 		self.cursor = self.conn.cursor()
 
-# ====================================================================================================
+	# ====================================================================================================
+
+	def load_all(self):
+		"""
+		Make syntaxic sugar for everything we need
+		"""
+		# From the h5file
+		group = self.h5file.root.recommender
+		for array in self.h5file.list_nodes(group):
+			self.load(array.name)
+		# Build dictionary of indexes
+		self.idx = dict(zip(self.ids[:], range(self.ids[:].shape[0])))
+
+	def load(self, attr):
+		"""
+		Make syntaxic sugar an attribute from hdf5 file
+		"""
+		setattr(self, attr, getattr(self.h5file.root.recommender, attr))
+
+	def save(self, attr):
+		"""
+		Save an attribute to the hdf5 file
+		"""
+		try:
+			self.h5file.createArray(self.h5file.root.recommender, attr, getattr(self, attr))
+		except tables.exceptions.NodeError:
+			# If the array already exists, update it
+			getattr(self.h5file.root, attr)[:] = getattr(self, attr)
+
+
+
+# ======================================================================================================
+# ======================================================================================================
 
 
 class LDABasedRecommendation(RecommendationInterface):
 	
-	def train(self, K, D, vocab_filename, start_date, end_date, categories, batch_size=512, epochs_to_do=2, addSmoothing=True):
+	def train(self, K, D, vocab_filename, start_date, end_date, categories, 
+		batch_size=512, epochs_to_do=2, addSmoothing=True):
 		"""
 		Train the recommender based on LDA
 
@@ -112,10 +161,8 @@ class LDABasedRecommendation(RecommendationInterface):
 			# Query for all documents we want
 			query = self.cursor.execute("""SELECT abstract,id
 				FROM Articles
-				WHERE updated_at > '%s' AND updated_at < '%s'
-				%s
-				ORDER BY updated_at""" % \
-				(self.start_date, self.end_date, self.cat_query_condition))
+				WHERE %s
+				ORDER BY updated_at""" % self.query_condition)
 
 			# Run over the query results and feed them to the model per batch
 			while True:
@@ -172,11 +219,11 @@ class LDABasedRecommendation(RecommendationInterface):
 
 	# ====================================================================================================
 
-	def build_tree(self):
+	def build_tree(self, metric):
 		"""
 		Build a ball tree to efficiently compare the the feature vectors
 		"""
-		self.btree = sklearn.neighbors.BallTree(self.feature_vectors,
+		self.btree = sklearn.neighbors.BallTree(self.feature_vectors[:],
 			leaf_size=30, metric=metric)
 
 	def load_tree(self, filename):
@@ -320,59 +367,82 @@ class LDABasedRecommendation(RecommendationInterface):
 
 		return distances, indices
 
+	# ====================================================================================================
+
+	def get_topic_top_words(self, topic_id, k):
+		"""
+		Get the top k words for a given topic (i.e. the ones with highest
+		probability)
+
+		Arguments:
+		topic_id : int
+			Id of the topic
+		k : int
+			Number of words to return
+		"""
+		return self.vocabulary[np.argsort(self.topics[topic_id][::-1])][:k]
+
+	def get_top_topics(self, idx, k):
+		"""
+		Get the top k topics for a given paper (i.e. the ones with highest
+		probability)
+
+		Arguments:
+		idx : int
+			Id of the paper
+		k : int or fload
+			if a int is provided: Number of topics to return
+			if a float is provided: portion of topics (in probability) to return
+		"""
+		if type(k) is int:
+			return np.argsort(self.feature_vectors[idx])[::-1][:k]
+		elif type(k) is float:
+			n = sum( np.cumsum(np.sort(self.feature_vectors[idx])[::-1]) < k)
+			return np.argsort(self.feature_vectors[idx])[::-1][:n]
 
 
-# ====================================================================================================
+# ======================================================================================================
+# ======================================================================================================
 
 
 class AuthorBasedRecommendation(RecommendationInterface):
 	
+	def train(self):
+		print "Query documents..."
+		sql_query_string = """SELECT id,authors
+				FROM Articles
+				WHERE %s
+				ORDER BY updated_at""" % self.query_condition
+		result = self.cursor.execute(sql_query_string).fetchall()
+		ids = np.array([e[0] for e in result], dtype='S16')
+		authors = np.array([e[1] for e in result])
+
+		if any(ids != self.ids[:]):
+			print "Reorder indices..."
+			idx = dict(zip(ids,range(len(ids))))
+			ordering_func = np.vectorize(lambda x: idx[x])
+			order = ordering_func(self.ids[:])
+			authors = authors[order]
+			ids = ids[order]
+			assert all(ids == self.ids[:])
+
+		print "Build the set of authors..."
+		self.author_vocabulary = map(recommender_tokenize_author, authors)
+		self.author_vocabulary = [item for sublist in self.author_vocabulary for item in sublist]
+		self.author_vocabulary = list(set(self.author_vocabulary))
+		self.author_vocabulary = np.array(self.author_vocabulary)
+
+		print "Transform data and build neighbors..."
+		# Create the vectorizer
+		author_vectorizer = AuthorVectorizer(vocabulary=self.author_vocabulary)
+		# Vectorize the data
+		tdmat = author_vectorizer.transform(authors)
+		tdmat = tdmat.tocsr()
+		tdmat = scsp.csr_matrix((tdmat.data, tdmat.indices, tdmat.indptr),shape=tdmat.shape,dtype='float')
+		tdmat = normalize(tdmat, norm='l2', axis=1)
+		self.author_neighbors = tdmat.dot(tdmat.T)
 
 	def get_nearest_neighbors_authors(self, paper_id, k):
-		try:
-			self.author_neighbors
-		except AttributeError:
-			start_date = '2000-01-01 00:00:00.000000'
-			end_date   = '2014-05-01 00:00:00.000000'
-			categories = set(['cs', 'math', 'q-bio', 'stat'])
-			cat_query_condition = util.make_cat_query_condition(categories)
-			sql_query_string = """SELECT id,authors
-				FROM Articles
-				WHERE updated_at > '%s' AND updated_at < '%s'
-				%s
-				""" % \
-				(start_date, end_date, cat_query_condition)
-
-			print "Query documents..."
-			result = self.cursor.execute(sql_query_string).fetchall()
-			ids = np.array([e[0] for e in result], dtype='S16')
-			authors = np.array([e[1] for e in result])
-
-			if any(ids != self.ids[:]):
-				print "Reorder indices..."
-				idx = dict(zip(ids,range(len(ids))))
-				ordering_func = np.vectorize(lambda x: idx[x])
-				order = ordering_func(self.ids[:])
-				authors = authors[order]
-				ids = ids[order]
-				assert all(ids == self.ids[:])
-
-			print "Build the set of authors..."
-			self.author_vocabulary = map(recommender_tokenize_author, authors)
-			self.author_vocabulary = [item for sublist in self.author_vocabulary for item in sublist]
-			self.author_vocabulary = list(set(self.author_vocabulary))
-			self.author_vocabulary = np.array(self.author_vocabulary)
-
-			print "Transform data..."
-			# Create the vectorizer
-			author_vectorizer = AuthorVectorizer(vocabulary=self.author_vocabulary)
-			# Vectorize the data
-			tdmat = author_vectorizer.transform(authors)
-			tdmat = tdmat.tocsr()
-			tdmat = scsp.csr_matrix((tdmat.data, tdmat.indices, tdmat.indptr),shape=tdmat.shape,dtype='float')
-			tdmat = normalize(tdmat, norm='l2', axis=1)
-			self.author_neighbors = tdmat.dot(tdmat.T)
-
 		# Index of paper in feature vector matrix
 		idx = self.idx[paper_id]
 		rec = self.author_neighbors[idx].toarray()[0]

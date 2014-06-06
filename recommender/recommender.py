@@ -13,9 +13,11 @@ from arxiv.preprocess import recommender_tokenize_author
 import util
 from util import mystdout
 
+import pdb
+
 END_DATE = '3000-01-01 00:00:00.000000'
 START_DATE = '0001-01-01 00:00:00.000000'
-CATEGORIES = set()
+CATEGORIES = set(['math', 'cs', 'q-bio'])
 
 class ArXivRecommender():
 	"""
@@ -30,6 +32,8 @@ class ArXivRecommender():
 			Location of the hdf5 file. If it does not exist, it is created
 		db_path : str
 			Location of the db file
+		mode : 'r','a','w'
+			Opening mode of hdf5 file (if it is not 'r', many arrays gets overwritten ad updated)
 		start_date : string
 			Starting date of the papers to process
 		end_date : string
@@ -42,23 +46,25 @@ class ArXivRecommender():
 		self.h5file = tables.open_file(hdf5_path, mode=mode, title="Trailhead - arXiv recommender")
 		self.db_path = db_path
 
-		# Initialize miscalleneous data
+		# Initialize miscellaneous data
 		self.init_miscellaneous(start_date, end_date, categories)
+
+		# Initialize main group (ids/idx arrays)
+		self.init_main_group()
 
 	def init_miscellaneous(self, start_date, end_date, categories):
 		"""
-		Initialize miscalleneous data (i.e. read or write it depending on file mode)
+		Initialize miscellaneous data (i.e. read or write it depending on file mode)
 		"""
-		self.open_db_connection()
-		
 		if self.h5file.mode is not 'r':
+			# Create/overwrite miscellaneous table
 			try:
-				n = self.h5file.root.miscalleneous
-				n._f_remove()
+				f = getattr(self.h5file.root, 'miscellaneous')
+				f._f_remove()
 			except AttributeError:
 				pass
-			misc_table = self.h5file.create_table('/', 'miscalleneous', MiscellaneousData, 'Miscellaneous variables \
-					referring to articles to take into account')
+			misc_table = self.h5file.create_table('/', 'miscellaneous', MiscellaneousData, 
+				'Miscellaneous variables referring to articles to take into account')
 			misc_data = misc_table.row
 
 			assert len(start_date) == 26, "Invalid start date. Must respect format YYYY-MM-DD HH:mm:ss.ssssss"
@@ -71,21 +77,53 @@ class ArXivRecommender():
 			assert len(categories_string) <= 255, "categories_string is too large"
 			self.categories = categories
 			self.query_condition = util.make_query_condition(start_date, end_date, categories)
-			self.D = self.cursor.execute("""SELECT COUNT(*) FROM Articles
-				WHERE %s """ % \
-				(self.query_condition)).fetchone()[0]
+			self.open_db_connection()
+			self.D = self.cursor.execute("SELECT COUNT(*) FROM Articles WHERE %s"%self.query_condition).fetchone()[0]
 
-			row['D'] = self.D
-			row['start_date'] = self.start_date
-			row['end_date'] = self.end_date
-			row['categories'] = categories_string
+			misc_data['D'] = self.D
+			misc_data['start_date'] = self.start_date
+			misc_data['end_date'] = self.end_date
+			misc_data['categories'] = categories_string
+			misc_data.append()
+			self.h5file.flush()
 
 		else:
-			misc_data = self.h5file.root.miscalleneous.read()[0]
+			misc_data = self.h5file.root.miscellaneous.read()[0]
 			self.D = misc_data['D']
 			self.start_date = misc_data['start_date']
 			self.end_date = misc_data['end_date']
 			self.categories = set(misc_data['categories'].split('|'))
+			self.query_condition = util.make_query_condition(self.start_date, self.end_date, self.categories)
+
+	def init_main_group(self):
+		if self.h5file.mode is not 'r':
+			# Create/overwrite main group
+			try:
+				g = getattr(self.h5file.root, 'main')
+				g._g_remove('recursive')
+			except AttributeError:
+				pass
+			self.h5file.create_group("/", 'main', 'Recommender main group')
+		
+			# Get articles ids
+			self.open_db_connection()
+			result = self.cursor.execute("SELECT id FROM Articles WHERE %s ORDER BY updated_at"%self.query_condition).fetchall()
+			self.ids = [e[0] for e in result]
+			self.ids = np.array(self.ids, dtype='S30')
+			
+			# Store them
+			util.store_carray(self.ids, 'ids', self.h5file, '/main')
+			self.h5file.flush()
+
+		else:
+			self.ids = np.array(self.h5file.root.main.ids[:], dtype='S30')
+
+		# Get articles indices in recommender
+		self.idx = dict(zip(self.ids,range(self.D)))
+
+	# ====================================================================================================
+
+	def add_recommendation_method():
 
 	# ====================================================================================================
 
@@ -133,70 +171,6 @@ class ArXivRecommender():
 		"""
 		self.conn = sqlite3.connect(self.db_path)
 		self.cursor = self.conn.cursor()
-
-	# ====================================================================================================
-
-	def load_all(self):
-		"""
-		Make syntaxic sugar for everything we need
-		"""
-		# From the h5file
-		group = self.h5file.root.recommender
-		for array in self.h5file.list_nodes(group):
-			self.load(array.name)
-		# Build dictionary of indexes
-		self.idx = dict(zip(self.ids[:], range(self.ids[:].shape[0])))
-
-	def load(self, attr):
-		"""
-		Make syntaxic sugar an attribute from hdf5 file
-		"""
-		setattr(self, attr, getattr(self.h5file.root.recommender, attr))
-
-	def save(self, attr):
-		"""
-		Save an attribute to the hdf5 file
-		"""
-		try:
-			self.h5file.createArray(self.h5file.root.recommender, attr, getattr(self, attr))
-		except tables.exceptions.NodeError:
-			# If the array already exists, update it
-			getattr(self.h5file.root, attr)[:] = getattr(self, attr)
-
-	# ====================================================================================================
-
-	# ====================================================================================================
-
-	def get_topic_top_words(self, topic_id, k):
-		"""
-		Get the top k words for a given topic (i.e. the ones with highest
-		probability)
-
-		Arguments:
-		topic_id : int
-			Id of the topic
-		k : int
-			Number of words to return
-		"""
-		return self.vocabulary[np.argsort(self.topics[topic_id][::-1])][:k]
-
-	def get_top_topics(self, idx, k):
-		"""
-		Get the top k topics for a given paper (i.e. the ones with highest
-		probability)
-
-		Arguments:
-		idx : int
-			Id of the paper
-		k : int or fload
-			if a int is provided: Number of topics to return
-			if a float is provided: portion of topics (in probability) to return
-		"""
-		if type(k) is int:
-			return np.argsort(self.feature_vectors[idx])[::-1][:k]
-		elif type(k) is float:
-			n = sum( np.cumsum(np.sort(self.feature_vectors[idx])[::-1]) < k)
-			return np.argsort(self.feature_vectors[idx])[::-1][:n]
 
 # ========================================================================================================
 
