@@ -16,3 +16,6 @@
 
 # Everything in data folder
 data/*
+
+# Python temporary script
+tmp.py

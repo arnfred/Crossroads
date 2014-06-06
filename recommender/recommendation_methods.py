@@ -7,15 +7,14 @@ import tables
 from sklearn.preprocessing import normalize
 import sklearn.neighbors
 
+import util
+from util import mystdout
 from onlineldavb.myonlineldavb import OnlineLDA
 from arxiv.preprocess import ArticleParser, AuthorVectorizer
 from arxiv.preprocess import recommender_tokenize_author
-import util
-from util import mystdout
 
 
-
-class RecommendationInterface(object):
+class RecommendationMethodInterface(object):
 	"""
 	Interface for all recommendation methods.
 	Every object deals directly with the arXiv database 
@@ -94,8 +93,8 @@ class RecommendationInterface(object):
 # ======================================================================================================
 
 
-class LDABasedRecommendation(RecommendationInterface):
-	
+class LDABasedRecommendation(RecommendationMethodInterface):
+
 	def train(self, K, D, vocab_filename, start_date, end_date, categories, 
 		batch_size=512, epochs_to_do=2, addSmoothing=True):
 		"""
@@ -405,7 +404,7 @@ class LDABasedRecommendation(RecommendationInterface):
 # ======================================================================================================
 
 
-class AuthorBasedRecommendation(RecommendationInterface):
+class AuthorBasedRecommendation(RecommendationMethodInterface):
 	
 	def train(self):
 		print "Query documents..."

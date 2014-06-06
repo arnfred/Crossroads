@@ -42,15 +42,13 @@ class ArXivRecommender():
 		categories : iterable
 			Categories of papers to process
 		"""
-		# Open hdf5 file system and sqlite database
-		self.h5file = tables.open_file(hdf5_path, mode=mode, title="Trailhead - arXiv recommender")
 		self.db_path = db_path
-
-		# Initialize miscellaneous data
+		# Open hdf5 file
+		self.h5file = tables.open_file(hdf5_path, mode=mode, title="Trailhead - arXiv recommender")
+		# Initialize stuff
 		self.init_miscellaneous(start_date, end_date, categories)
-
-		# Initialize main group (ids/idx arrays)
 		self.init_main_group()
+		self.init_recommendation_methods()
 
 	def init_miscellaneous(self, start_date, end_date, categories):
 		"""
@@ -85,7 +83,8 @@ class ArXivRecommender():
 			misc_data['end_date'] = self.end_date
 			misc_data['categories'] = categories_string
 			misc_data.append()
-			self.h5file.flush()
+			misc_table.flush()
+			assert self.h5file.root.miscellaneous.nrows == 1, "There should not be multiple rows in table /miscellaneous"
 
 		else:
 			misc_data = self.h5file.root.miscellaneous.read()[0]
@@ -96,6 +95,9 @@ class ArXivRecommender():
 			self.query_condition = util.make_query_condition(self.start_date, self.end_date, self.categories)
 
 	def init_main_group(self):
+		"""
+		Initialize the main group (ids/idx arrays)
+		"""
 		if self.h5file.mode is not 'r':
 			# Create/overwrite main group
 			try:
@@ -121,9 +123,24 @@ class ArXivRecommender():
 		# Get articles indices in recommender
 		self.idx = dict(zip(self.ids,range(self.D)))
 
+	def init_recommendation_methods(self):
+		"""
+		Initialize the recommendation methods
+		"""
+		self.methods = list()	# List of recommendation methods
+		self.weights = list()	# List of weight for recommendation combination
+
 	# ====================================================================================================
 
-	def add_recommendation_method():
+	def add_recommendation_method(self, recommendation_method):
+		"""
+		Add a recommendation methods to the recommender
+
+		Arguments:
+		recommendation_method : instance of an object  RecommendationMethodInterface
+		"""
+		self.methods.append(recommendation_method)
+		self.weight.append(1)
 
 	# ====================================================================================================
 
