@@ -7,6 +7,7 @@ import tables
 from sklearn.preprocessing import normalize
 import sklearn.neighbors
 
+from .exceptions import UnknownIDException, UnknownAuthorException
 from onlineldavb.myonlineldavb import OnlineLDA
 from arxiv.preprocess import ArticleParser, AuthorVectorizer
 from arxiv.preprocess import recommender_tokenize_author
