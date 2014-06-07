@@ -1,3 +1,4 @@
+
 """
 Preprocess articles crawled from arXiv API for LDA
 """
@@ -143,20 +144,17 @@ class ArticleParser(sklearn_fe_text.CountVectorizer):
 	Class used to parse arXiv articles
 	"""
 
-	def __init__(self, vocab, stopwords):
+	def __init__(self, vocab):
 		"""
 		Initialize an arXiv paper parser 
 
 		Arguments:
 		vocab : array_like
 			Vocabulary
-		stopwords : array_like
-			Stopwords
 		"""
 		super(ArticleParser, self).__init__(
 			analyzer   = tokenize_doc,
-			vocabulary = vocab,
-			stopwords  = stopwords)
+			vocabulary = vocab)
 	
 	def parse_doc_list(self, docs):
 		"""

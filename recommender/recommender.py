@@ -7,12 +7,12 @@ import tables
 from sklearn.preprocessing import normalize
 import sklearn.neighbors
 
-import .util
-from .util import mystdout
-from .exceptions import UnknownIDException, UnknownAuthorException
-from .onlineldavb.myonlineldavb import OnlineLDA
-from .arxiv.preprocess import ArticleParser, AuthorVectorizer, recommender_tokenize_author
+import util
+from util import mystdout
+from onlineldavb.myonlineldavb import OnlineLDA
+from arxiv.preprocess import ArticleParser, AuthorVectorizer, recommender_tokenize_author
 from .recommendation_methods import LDABasedRecommendation, AuthorBasedRecommendation
+from .exceptions import UnknownIDException, UnknownAuthorException
 
 END_DATE = '3000-01-01 00:00:00.000000'
 START_DATE = '0001-01-01 00:00:00.000000'
@@ -180,8 +180,8 @@ class ArXivRecommender():
 		recommendation_method : str
 			Name of a recommendation method in: LDABasedRecommendation, AuthorBasedRecommendation 
 		"""
-		obj = globals()[class_name](self.h5file, self.db_path)
-		self.methods[class_name] = obj
+		obj = globals()[recommendation_method](self.h5file, self.db_path)
+		self.methods[recommendation_method] = obj
 
 	# ====================================================================================================
 

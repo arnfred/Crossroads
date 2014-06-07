@@ -38,7 +38,7 @@ def store_sparse_mat(mat, name, h5file, group):
 		arr = np.array(getattr(mat, par))
 		atom = tables.Atom.from_dtype(arr.dtype)
 		shape = arr.shape
-		ds = h5file.create_carray(group, full_name, atom, shape)
+		ds = h5file.create_carray(group, full_name, atom, shape, title='sparse_mat_part')
 		ds[:] = arr
 
 def load_sparse_mat(name, h5file, group):

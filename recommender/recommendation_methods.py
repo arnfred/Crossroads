@@ -13,6 +13,7 @@ from onlineldavb.myonlineldavb import OnlineLDA
 from arxiv.preprocess import ArticleParser, AuthorVectorizer
 from arxiv.preprocess import recommender_tokenize_author
 
+import pdb
 
 class RecommendationMethodInterface(object):
 	"""
@@ -21,9 +22,26 @@ class RecommendationMethodInterface(object):
 	and is linked to a hdf5 file opened by its parent
 	"""
 	def __init__(self, h5file, db_path):
-		self.h5file = h5file
-		self.group = getattr(self.h5file.root.recommendation_methods, self.__class__.__name__)
 		self.db_path = db_path
+		self.h5file = h5file
+		try:
+			self.group = getattr(self.h5file.root.recommendation_methods, self.__class__.__name__)
+		except AttributeError:
+			self.group = self.h5file.create_group("/recommendation_methods", self.__class__.__name__, self.__class__.__name__)
+		self.load_miscellaneous()
+
+	def load_miscellaneous(self):
+		"""
+		Initialize miscellaneous data as object arguments 
+		See init_miscellaneous function for more informations
+		"""
+		misc_data = self.h5file.root.miscellaneous.read()[0]
+		self.D = misc_data['D']
+		self.start_date = misc_data['start_date']
+		self.end_date = misc_data['end_date']
+		self.categories = set(misc_data['categories'].split('|'))
+		self.query_condition = util.make_query_condition(self.start_date, self.end_date, self.categories)
+
 
 	def train(self):
 		"""
@@ -65,12 +83,19 @@ class RecommendationMethodInterface(object):
 		"""
 		Syntaxic sugar for everything we need
 		"""
-		# From the h5file
-		for array in self.h5file.list_nodes(self.group):
-			self.load(group, array.name)
+		for node in self.h5file.list_nodes(self.group):
+			if type(node) is tables.group.Group:
+				# If the node is a group, 
+				# then it contains a sparse matrix and load it
+				name = g._v_pathname.split('/')[-1]
+				util.load_sparse_mat(name, self.h5file, self.group)
+			else:
+				# Else the node is an array/Carray, then load it
+				self.load(group, node.name)
 
 		# Build dictionary of indexes
-		self.idx = dict(zip(self.ids[:], range(self.ids[:].shape[0])))
+		ids = self.h5file.root.main.ids[:]
+		self.idx = dict(zip(ids[:], range(ids[:].shape[0])))
 
 	def load(self, group, attr):
 		"""
@@ -86,29 +111,19 @@ class RecommendationMethodInterface(object):
 
 class LDABasedRecommendation(RecommendationMethodInterface):
 
-	def train(self, K, D, vocab_filename, start_date, end_date, categories, 
-		batch_size=512, epochs_to_do=2, addSmoothing=True):
+	def train(self, K, vocab_filename, batch_size=512, epochs_to_do=2):
 		"""
 		Train the recommender based on LDA
 
 		Arguments:
 		K : int
 			Number of topics
-		D : int
-			Total number of documents
 		vocab_filename : string
 			Location of vocabulary file
 		batch_size : int (default: 512)
 			Size of a batch of document per iteration of the algorithm
 		epochs_to_do : int (default: 2)
 			Number of epochs to do
-		start_date : string
-			Starting date of the papers to process
-		end_date : string
-			Ending date of the papers to process
-			Only papers in this range of date will be taken into account
-		categories : iterable
-			Categories of papers to process
 		"""
 		# Open db connection
 		self.open_db_connection()
@@ -123,24 +138,16 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 		self.h5file.create_array(self.group, 'vocabulary', self.vocabulary, "Vocabulary")
 		# Initialize the parser
 		self.parser = ArticleParser(self.vocabulary)
-		# Start date of documents
-		self.start_date = start_date
-		# End date of documents
-		self.end_date = end_date
-		# Categories pattern used in SQL query
-		self.query_condition = util.make_query_condition(categories)
 		# Number of topics
 		self.K = K
 		# Vocabulary size
 		self.W = len(self.parser.vocabulary_)
-		# Total number of documents
-		self.D = D
 		# Initialize the online VB algorithm with alpha=1/K, eta=1/K, tau_0=1024, kappa=0.7
 		self.olda = OnlineLDA(self.parser, self.K, self.D, 1./self.K, 1./self.K, 1024., 0.7)
 		# Actually run the algorithm and get the feature vector for each paper
-		self._run_onlineldavb(batch_size, epochs_to_do, addSmoothing)
+		self._run_onlineldavb(batch_size, epochs_to_do)
 
-	def _run_onlineldavb(self, batch_size, epochs_to_do, addSmoothing):
+	def _run_onlineldavb(self, batch_size, epochs_to_do):
 		"""
 		Run the online VB algorithm on the data
 		"""
@@ -190,9 +197,9 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 
 					# Keep track of the feature vectors for each documment
 					ids += [str(j) for i,j in result] # ids corresponding to current documents
-					self.feature_vectors += self._compute_feature_vectors(gamma, addSmoothing=addSmoothing).tolist()
+					self.feature_vectors += self._compute_feature_vectors(gamma, addSmoothing=False).tolist()
 
-				mystdout.write("Epoch %d: (%d/%d docs seen), perplexity = %.3f" % \
+				mystdout.write("Epoch %d: (%d/%d docs seen), perplexity = %e" % \
 					(epoch,docs_seen,self.D,perplexity),
 					iteration, np.ceil(float(self.D)/batch_size))
 				iteration += 1
@@ -200,7 +207,7 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 		mystdout.write("Online VB LDA done. perplexity = %.3f" % perplexity, 1,1, ln=1)
 
 		# Convert the lists to a Numpy arrays
-		self.feature_vectors = np.array(self.feature_vectors, dtype=np.float)
+		self.feature_vectors = scsp.csr_matrix(self.feature_vectors, dtype=np.float)
 		ids = np.array(ids)
 
 		# Check indices coherence and reorder if necessary
@@ -210,18 +217,19 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 			idx = dict(zip(ids,range(len(ids))))
 			ordering_func = np.vectorize(lambda x: idx[x])
 			order = ordering_func(self.ids[:])
-			authors = authors[order]
+			self.feature_vectors = self.feature_vectors[order]
 			ids = ids[order]
 			assert all(ids == self.ids[:])
 
 		print "Save feature_vectors to hdf5 file..."
 		try:
 			f = self.h5file.root.recommendation_methods.feature_vectors
-			f._f_remove()
-			print "WARNING: array /recommendation_methods/feature_vectors overwritten"
+			f._f_remove('recursive')
+			print "WARNING: sparse array /recommendation_methods/feature_vectors are overwritten"
 		except AttributeError:
 			pass
-		self.h5file.create_array(self.group, 'feature_vectors', feature_vectors, "Feature vectors")
+		self.h5file.create_group(self.group, 'feature_vectors', 'Feature vectors sparse matrix')
+		util.store_sparse_mat(self.feature_vectors, 'feature_vectors', self.h5file, self.group.feature_vectors)		
 
 		print "Save topics to hdf5 file..."
 		self.topics = self.olda._lambda
@@ -231,17 +239,21 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 			print "WARNING: array /recommendation_methods/topics overwritten"
 		except AttributeError:
 			pass
-		self.h5file.create_array(self.group, 'topics', topics, "Topics")
+		self.h5file.create_array(self.group, 'topics', self.topics, "Topics")
 
-	def _compute_feature_vectors(self, gamma, addSmoothing=True):
+	def _compute_feature_vectors(self, gamma, addSmoothing=False):
 		"""
 		Get the feature vectors from LDA gamma parameters
 		"""
 		if addSmoothing:
+			# Usual feature vectors normalization
 			return (gamma + self.olda._alpha) / (np.tile(gamma.sum(axis=1), \
 				(gamma.shape[1],1)).T + gamma.shape[1]*self.olda._alpha)
 		else:
-			gamma -= self.olda._alpha
+			# Truncate vectors to remove minnimum values and get a sparse vector
+			row_mins = np.min(gamma, axis=1)
+			row_mins = np.tile(row_mins, (self.K,1)).T
+			gamma[gamma == row_mins] = 0
 			return gamma / np.tile(gamma.sum(axis=1), (gamma.shape[1],1)).T
 
 	# ====================================================================================================
@@ -250,7 +262,7 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 		"""
 		Build a ball tree to efficiently compare the the feature vectors
 		"""
-		self.btree = sklearn.neighbors.BallTree(self.feature_vectors[:],
+		self.btree = sklearn.neighbors.BallTree(self.feature_vectors,
 			leaf_size=30, metric=metric)
 
 	def load_tree(self, filename):
@@ -303,10 +315,10 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 		batch_size = 100
 
 		try:
-			self.h5file.createCArray("/", "neighbors_distances", tables.Float64Atom(), shape=(N,k))
-			self.h5file.createCArray("/", "neighbors_indices", tables.UInt64Atom(), shape=(N,k))
-			self.neighbors_distances = self.h5file.root.neighbors_distances
-			self.neighbors_indices = self.h5file.root.neighbors_indices
+			self.h5file.createCArray(self.group, "neighbors_distances", tables.Float64Atom(), shape=(N,k))
+			self.h5file.createCArray(self.group, "neighbors_indices", tables.UInt64Atom(), shape=(N,k))
+			self.neighbors_distances = self.group.neighbors_distances
+			self.neighbors_indices = self.group.neighbors_indices
 		except Exception:
 			self.load("neighbors_distances")
 			self.load("neighbors_indices")
