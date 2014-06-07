@@ -156,7 +156,6 @@ class ArXivRecommender():
 			pass
 		self.h5file.create_group("/", 'recommendation_methods', 'Recommendation methods')
 		self.methods = list()	# List of recommendation methods
-		self.weights = list()	# List of weight for recommendation combination
 
 	def load_recommendation_methods(self):
 		self.methods = list()	# List of recommendation methods
@@ -169,8 +168,6 @@ class ArXivRecommender():
 			obj = globals()[class_name](self.h5file, self.db_path)
 			obj.load_all()
 			self.methods.append(obj)
-			self.weight.append() # DEAL WITH WEIGHTS IN ALL RECOMMENDATION METHODS
-
 
 	# ====================================================================================================
 

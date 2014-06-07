@@ -22,6 +22,7 @@ class RecommendationMethodInterface(object):
 	"""
 	def __init__(self, h5file, db_path):
 		self.h5file = h5file
+		self.group = getattr(self.h5file.root.recommendation_methods, self.__class__.__name__)
 		self.db_path = db_path
 
 	def train(self):
@@ -65,8 +66,7 @@ class RecommendationMethodInterface(object):
 		Syntaxic sugar for everything we need
 		"""
 		# From the h5file
-		group = getattr(self.h5file.root.recommendation_methods, self.__class__.__name__)
-		for array in self.h5file.list_nodes(group):
+		for array in self.h5file.list_nodes(self.group):
 			self.load(group, array.name)
 
 		# Build dictionary of indexes
@@ -112,9 +112,17 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 		"""
 		# Open db connection
 		self.open_db_connection()
+		# Initialize and save the Vocabulary
+		self.vocabulary = np.array(open(vocab_filename, 'r').read().rstrip('\n').split('\n'))
+		try:
+			f = self.h5file.root.recommendation_methods.vocabulary
+			f._f_remove()
+			print "WARNING: array /recommendation_methods/vocabulary overwritten"
+		except AttributeError:
+			pass
+		self.h5file.create_array(self.group, 'vocabulary', self.vocabulary, "Vocabulary")
 		# Initialize the parser
-		vocab = open(vocab_filename, 'r').read().rstrip('\n').split('\n')
-		self.parser = ArticleParser(vocab)
+		self.parser = ArticleParser(self.vocabulary)
 		# Start date of documents
 		self.start_date = start_date
 		# End date of documents
@@ -137,9 +145,9 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 		Run the online VB algorithm on the data
 		"""
 		# Initialize utility variables
-		self.ids = list()           # A mapping between papers id and vector indices
-		self.feature_vectors = []   # Feature vectors for each document
-
+		ids = list()           # A mapping between papers id and vector indices
+		self.feature_vectors = [] 	# Feature vectors
+		
 		perplexity = 0.0
 		self.perplexity = []
 
@@ -181,7 +189,7 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 					gamma = self.olda.update_gamma(cur_docset)
 
 					# Keep track of the feature vectors for each documment
-					self.ids += [str(j) for i,j in result] # ids corresponding to current documents
+					ids += [str(j) for i,j in result] # ids corresponding to current documents
 					self.feature_vectors += self._compute_feature_vectors(gamma, addSmoothing=addSmoothing).tolist()
 
 				mystdout.write("Epoch %d: (%d/%d docs seen), perplexity = %.3f" % \
@@ -189,10 +197,41 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 					iteration, np.ceil(float(self.D)/batch_size))
 				iteration += 1
 
-		# Convert the lists to a Numpy arrays
-		self.feature_vectors = np.array(self.feature_vectors)
-		self.ids = np.array(self.ids)
 		mystdout.write("Online VB LDA done. perplexity = %.3f" % perplexity, 1,1, ln=1)
+
+		# Convert the lists to a Numpy arrays
+		self.feature_vectors = np.array(self.feature_vectors, dtype=np.float)
+		ids = np.array(ids)
+
+		# Check indices coherence and reorder if necessary
+		self.ids = self.h5file.root.main.ids
+		if any(ids != self.ids[:]):
+			print "Reorder articles indices..."
+			idx = dict(zip(ids,range(len(ids))))
+			ordering_func = np.vectorize(lambda x: idx[x])
+			order = ordering_func(self.ids[:])
+			authors = authors[order]
+			ids = ids[order]
+			assert all(ids == self.ids[:])
+
+		print "Save feature_vectors to hdf5 file..."
+		try:
+			f = self.h5file.root.recommendation_methods.feature_vectors
+			f._f_remove()
+			print "WARNING: array /recommendation_methods/feature_vectors overwritten"
+		except AttributeError:
+			pass
+		self.h5file.create_array(self.group, 'feature_vectors', feature_vectors, "Feature vectors")
+
+		print "Save topics to hdf5 file..."
+		self.topics = self.olda._lambda
+		try:
+			f = self.h5file.root.recommendation_methods.topics
+			f._f_remove()
+			print "WARNING: array /recommendation_methods/topics overwritten"
+		except AttributeError:
+			pass
+		self.h5file.create_array(self.group, 'topics', topics, "Topics")
 
 	def _compute_feature_vectors(self, gamma, addSmoothing=True):
 		"""
