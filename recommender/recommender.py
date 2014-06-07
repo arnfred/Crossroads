@@ -7,14 +7,12 @@ import tables
 from sklearn.preprocessing import normalize
 import sklearn.neighbors
 
+import .util
+from .util import mystdout
 from .exceptions import UnknownIDException, UnknownAuthorException
-from onlineldavb.myonlineldavb import OnlineLDA
-from arxiv.preprocess import ArticleParser, AuthorVectorizer
-from arxiv.preprocess import recommender_tokenize_author
-import util
-from util import mystdout
-
-import pdb
+from .onlineldavb.myonlineldavb import OnlineLDA
+from .arxiv.preprocess import ArticleParser, AuthorVectorizer, recommender_tokenize_author
+from .recommendation_methods import LDABasedRecommendation, AuthorBasedRecommendation
 
 END_DATE = '3000-01-01 00:00:00.000000'
 START_DATE = '0001-01-01 00:00:00.000000'
@@ -46,90 +44,133 @@ class ArXivRecommender():
 		self.db_path = db_path
 		# Open hdf5 file
 		self.h5file = tables.open_file(hdf5_path, mode=mode, title="Trailhead - arXiv recommender")
-		# Initialize stuff
-		self.init_miscellaneous(start_date, end_date, categories)
-		self.init_main_group()
-		self.init_recommendation_methods()
-
-	def init_miscellaneous(self, start_date, end_date, categories):
-		"""
-		Initialize miscellaneous data (i.e. read or write it depending on file mode)
-		"""
-		if self.h5file.mode is not 'r':
-			# Create/overwrite miscellaneous table
-			try:
-				f = getattr(self.h5file.root, 'miscellaneous')
-				f._f_remove()
-			except AttributeError:
-				pass
-			misc_table = self.h5file.create_table('/', 'miscellaneous', MiscellaneousData, 
-				'Miscellaneous variables referring to articles to take into account')
-			misc_data = misc_table.row
-
-			assert len(start_date) == 26, "Invalid start date. Must respect format YYYY-MM-DD HH:mm:ss.ssssss"
-			self.start_date = start_date
-
-			assert len(end_date) == 26, "Invalid end date. Must respect format YYYY-MM-DD HH:mm:ss.ssssss"
-			self.end_date = end_date
-
-			categories_string = '|'.join(categories)
-			assert len(categories_string) <= 255, "categories_string is too large"
-			self.categories = categories
-			self.query_condition = util.make_query_condition(start_date, end_date, categories)
-			self.open_db_connection()
-			self.D = self.cursor.execute("SELECT COUNT(*) FROM Articles WHERE %s"%self.query_condition).fetchone()[0]
-
-			misc_data['D'] = self.D
-			misc_data['start_date'] = self.start_date
-			misc_data['end_date'] = self.end_date
-			misc_data['categories'] = categories_string
-			misc_data.append()
-			misc_table.flush()
-			assert self.h5file.root.miscellaneous.nrows == 1, "There should not be multiple rows in table /miscellaneous"
-
-		else:
-			misc_data = self.h5file.root.miscellaneous.read()[0]
-			self.D = misc_data['D']
-			self.start_date = misc_data['start_date']
-			self.end_date = misc_data['end_date']
-			self.categories = set(misc_data['categories'].split('|'))
-			self.query_condition = util.make_query_condition(self.start_date, self.end_date, self.categories)
-
-	def init_main_group(self):
-		"""
-		Initialize the main group (ids/idx arrays)
-		"""
-		if self.h5file.mode is not 'r':
-			# Create/overwrite main group
-			try:
-				g = getattr(self.h5file.root, 'main')
-				g._g_remove('recursive')
-			except AttributeError:
-				pass
-			self.h5file.create_group("/", 'main', 'Recommender main group')
 		
-			# Get articles ids
-			self.open_db_connection()
-			result = self.cursor.execute("SELECT id FROM Articles WHERE %s ORDER BY updated_at"%self.query_condition).fetchall()
-			self.ids = [e[0] for e in result]
-			self.ids = np.array(self.ids, dtype='S30')
-			
-			# Store them
-			util.store_carray(self.ids, 'ids', self.h5file, '/main')
-			self.h5file.flush()
-
+		# Initialize stuff
+		if mode is 'w':
+			self.init_miscellaneous(start_date, end_date, categories)
+			self.init_main_group()
+			self.init_recommendation_methods()
 		else:
-			self.ids = np.array(self.h5file.root.main.ids[:], dtype='S30')
+			# Load misc data
+			self.load_miscellaneous()
+			# Load main group data
+			self.load_main_group()
+			# Load recommendation methods
+			self.load_recommendation_methods()
 
 		# Get articles indices in recommender
 		self.idx = dict(zip(self.ids,range(self.D)))
+
+	def init_miscellaneous(self, start_date, end_date, categories):
+		"""
+		Initialize miscellaneous data as object arguments, i.e.:
+		- D 			  : the number of articles in the system
+		- start_date 	  : the start date of 'updated_at' fields of articles
+		- end_date 		  : the end date of 'updated_at' fields of articles
+		- categories 	  : the categories of articles
+		- query_condition : the WHERE query condition to retrieve all articles
+		"""
+		# Create/overwrite miscellaneous table
+		try:
+			f = getattr(self.h5file.root, 'miscellaneous')
+			f._f_remove()
+			print "WARNING: group /miscellaneous overwritten"
+		except AttributeError:
+			pass
+		misc_table = self.h5file.create_table('/', 'miscellaneous', MiscellaneousData, 
+			'Miscellaneous variables referring to articles to take into account')
+		misc_data = misc_table.row
+
+		assert len(start_date) == 26, "Invalid start date. Must respect format YYYY-MM-DD HH:mm:ss.ssssss"
+		self.start_date = start_date
+
+		assert len(end_date) == 26, "Invalid end date. Must respect format YYYY-MM-DD HH:mm:ss.ssssss"
+		self.end_date = end_date
+
+		categories_string = '|'.join(categories)
+		assert len(categories_string) <= 255, "categories_string is too large"
+		self.categories = categories
+		
+		self.query_condition = util.make_query_condition(self.start_date, self.end_date, self.categories)
+		self.open_db_connection()
+		self.D = self.cursor.execute("SELECT COUNT(*) FROM Articles WHERE %s"%self.query_condition).fetchone()[0]
+		misc_data['D'] = self.D
+		misc_data['start_date'] = self.start_date
+		misc_data['end_date'] = self.end_date
+		misc_data['categories'] = categories_string
+		misc_data.append()
+		misc_table.flush()
+		assert self.h5file.root.miscellaneous.nrows == 1, "There should not be multiple rows in table /miscellaneous"
+
+	def load_miscellaneous(self):
+		"""
+		Initialize miscellaneous data as object arguments 
+		See init_miscellaneous function for more informations
+		"""
+		misc_data = self.h5file.root.miscellaneous.read()[0]
+		self.D = misc_data['D']
+		self.start_date = misc_data['start_date']
+		self.end_date = misc_data['end_date']
+		self.categories = set(misc_data['categories'].split('|'))
+		self.query_condition = util.make_query_condition(self.start_date, self.end_date, self.categories)
+
+	def init_main_group(self):
+		"""
+		Initialize the main group
+		"""
+		# Create/overwrite main group
+		try:
+			g = getattr(self.h5file.root, 'main')
+			g._g_remove('recursive')
+			print "WARNING: group /main overwritten on hdf5 file"
+		except AttributeError:
+			pass
+		self.h5file.create_group("/", 'main', 'Recommender main group')
+	
+		# Get articles ids
+		self.open_db_connection()
+		result = self.cursor.execute("SELECT id FROM Articles WHERE %s ORDER BY updated_at"%self.query_condition).fetchall()
+		self.ids = [e[0] for e in result]
+		self.ids = np.array(self.ids, dtype='S30')
+		
+		# Store them
+		util.store_carray(self.ids, 'ids', self.h5file, '/main')
+		self.h5file.flush()
+
+	def load_main_group(self):
+		"""
+		Load the main group
+		"""
+		self.ids = np.array(self.h5file.root.main.ids[:], dtype='S30')
 
 	def init_recommendation_methods(self):
 		"""
 		Initialize the recommendation methods
 		"""
+		# Create/overwrite main group
+		try:
+			g = getattr(self.h5file.root, 'recommendation_methods')
+			g._g_remove('recursive')
+			print "WARNING: group /recommendation_methods overwritten on hdf5 file"
+		except AttributeError:
+			pass
+		self.h5file.create_group("/", 'recommendation_methods', 'Recommendation methods')
 		self.methods = list()	# List of recommendation methods
 		self.weights = list()	# List of weight for recommendation combination
+
+	def load_recommendation_methods(self):
+		self.methods = list()	# List of recommendation methods
+		self.weights = list()	# List of weight for recommendation combination
+		# Iterate over the recommendation_methods group to get all recommendation methods
+		group = self.h5file.root.recommendation_methods
+		for i,n in enumerate(self.h5file.list_nodes(group)):
+			assert type(n) is tables.group.Group, "group /recommendation_methods should only contain groups"
+			class_name = g._v_name
+			obj = globals()[class_name](self.h5file, self.db_path)
+			obj.load_all()
+			self.methods.append(obj)
+			self.weight.append() # DEAL WITH WEIGHTS IN ALL RECOMMENDATION METHODS
+
 
 	# ====================================================================================================
 

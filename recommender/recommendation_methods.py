@@ -34,7 +34,7 @@ class RecommendationMethodInterface(object):
 		"""
 		Compute the nearest neighbors for all articles from the feature vectors
 		"""
-		raise NotImplementedError( "train not implemented for %s" % self.__class__ )
+		raise NotImplementedError( "build_nearest_neighbors not implemented for %s" % self.__class__ )
 
 	def get_nearest_neighbors(self, paper_id, k):
 		"""
@@ -62,30 +62,22 @@ class RecommendationMethodInterface(object):
 
 	def load_all(self):
 		"""
-		Make syntaxic sugar for everything we need
+		Syntaxic sugar for everything we need
 		"""
 		# From the h5file
-		group = self.h5file.root.recommender
+		group = getattr(self.h5file.root.recommendation_methods, self.__class__.__name__)
 		for array in self.h5file.list_nodes(group):
-			self.load(array.name)
+			self.load(group, array.name)
+
 		# Build dictionary of indexes
 		self.idx = dict(zip(self.ids[:], range(self.ids[:].shape[0])))
 
-	def load(self, attr):
+	def load(self, group, attr):
 		"""
-		Make syntaxic sugar an attribute from hdf5 file
+		Syntaxic sugar an attribute from hdf5 file, i.e.: 
+		replace self.h5file.root.recommendation_methods.attr by self.attr to simplify code
 		"""
-		setattr(self, attr, getattr(self.h5file.root.recommender, attr))
-
-	def save(self, attr):
-		"""
-		Save an attribute to the hdf5 file
-		"""
-		try:
-			self.h5file.createArray(self.h5file.root.recommender, attr, getattr(self, attr))
-		except tables.exceptions.NodeError:
-			# If the array already exists, update it
-			getattr(self.h5file.root, attr)[:] = getattr(self, attr)
+		setattr(self, attr, getattr(group, attr))
 
 
 # ======================================================================================================
@@ -157,10 +149,8 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 			iteration = 1               # Iteration in this epoch
 
 			# Query for all documents we want
-			query = self.cursor.execute("""SELECT abstract,id
-				FROM Articles
-				WHERE %s
-				ORDER BY updated_at""" % self.query_condition)
+			query = self.cursor.execute(
+				"""SELECT abstract,id FROM Articles WHERE %s ORDER BY updated_at""" % self.query_condition)
 
 			# Run over the query results and feed them to the model per batch
 			while True:
@@ -388,7 +378,7 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 		Arguments:
 		idx : int
 			Id of the paper
-		k : int or fload
+		k : int or float
 			if a int is provided: Number of topics to return
 			if a float is provided: portion of topics (in probability) to return
 		"""
@@ -404,7 +394,7 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 
 
 class AuthorBasedRecommendation(RecommendationMethodInterface):
-	
+
 	def train(self):
 		print "Query documents..."
 		sql_query_string = """SELECT id,authors
