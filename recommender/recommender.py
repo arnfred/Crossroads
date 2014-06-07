@@ -155,7 +155,7 @@ class ArXivRecommender():
 		except AttributeError:
 			pass
 		self.h5file.create_group("/", 'recommendation_methods', 'Recommendation methods')
-		self.methods = list()	# List of recommendation methods
+		self.methods = dict()	# Dict of recommendation methods
 
 	def load_recommendation_methods(self):
 		self.methods = list()	# List of recommendation methods
@@ -167,19 +167,21 @@ class ArXivRecommender():
 			class_name = g._v_name
 			obj = globals()[class_name](self.h5file, self.db_path)
 			obj.load_all()
-			self.methods.append(obj)
+			self.methods[class_name] = obj
 
 	# ====================================================================================================
 
 	def add_recommendation_method(self, recommendation_method):
 		"""
-		Add a recommendation methods to the recommender
+		Add a recommendation methods to the recommender.
+		The method is just initialized but not trained or loaded
 
 		Arguments:
-		recommendation_method : instance of an object  RecommendationMethodInterface
+		recommendation_method : str
+			Name of a recommendation method in: LDABasedRecommendation, AuthorBasedRecommendation 
 		"""
-		self.methods.append(recommendation_method)
-		self.weight.append(1)
+		obj = globals()[class_name](self.h5file, self.db_path)
+		self.methods[class_name] = obj
 
 	# ====================================================================================================
 

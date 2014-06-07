@@ -128,7 +128,7 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 		# End date of documents
 		self.end_date = end_date
 		# Categories pattern used in SQL query
-		self.cat_query_condition = util.make_cat_query_condition(categories)
+		self.query_condition = util.make_query_condition(categories)
 		# Number of topics
 		self.K = K
 		# Vocabulary size
