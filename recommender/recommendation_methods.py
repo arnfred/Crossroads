@@ -4,16 +4,14 @@ import sqlite3
 import cPickle
 import tables
 
+import sklearn.metrics
 from sklearn.preprocessing import normalize
-import sklearn.neighbors
 
 import util
 from util import mystdout
 from onlineldavb.myonlineldavb import OnlineLDA
 from arxiv.preprocess import ArticleParser, AuthorVectorizer
 from arxiv.preprocess import recommender_tokenize_author
-
-import pdb
 
 class RecommendationMethodInterface(object):
 	"""
@@ -42,24 +40,37 @@ class RecommendationMethodInterface(object):
 		self.categories = set(misc_data['categories'].split('|'))
 		self.query_condition = util.make_query_condition(self.start_date, self.end_date, self.categories)
 
+	def get_nearest_neighbors(self, paper_id, k):
+		"""
+		Get the k nearest neighbors for a given paper_id
+
+		Arguments:
+		paper_id : int
+			Id of the paper
+		k : int
+			Number of neighbors to return
+		"""
+		try:
+			idx = self.idx[paper_id]
+			distances = self.neighbors_distances[idx,:k]
+			indices = self.neighbors_indices[idx,:k]
+			return distances, indices
+		except KeyError:
+			print "Unknown paper id: %s" % paper_id
+		except AttributeError:
+			print "Neighbors not initialized in %s" % self.__class__.__name__
 
 	def train(self):
 		"""
 		Train the recommendation method with the data (i.e. build feature vectors)
 		"""
-		raise NotImplementedError( "train not implemented for %s" % self.__class__ )
+		raise NotImplementedError( "train not implemented for %s" % self.__class__.__name__ )
 
 	def build_nearest_neighbors(self):
 		"""
 		Compute the nearest neighbors for all articles from the feature vectors
 		"""
-		raise NotImplementedError( "build_nearest_neighbors not implemented for %s" % self.__class__ )
-
-	def get_nearest_neighbors(self, paper_id, k):
-		"""
-		Query for the k nearest neighbors of article paper_id
-		"""
-		raise NotImplementedError( "get_nearest_neighbors not implemented for %s" % self.__class__ )
+		raise NotImplementedError( "build_nearest_neighbors not implemented for %s" % self.__class__.__name__ )
 
 	# ====================================================================================================
 
@@ -223,7 +234,7 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 
 		print "Save feature_vectors to hdf5 file..."
 		try:
-			f = self.h5file.root.recommendation_methods.feature_vectors
+			f = self.group.feature_vectors
 			f._f_remove('recursive')
 			print "WARNING: sparse array /recommendation_methods/feature_vectors are overwritten"
 		except AttributeError:
@@ -260,46 +271,9 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 
 	# ====================================================================================================
 
-	def build_tree(self, metric):
+	def build_nearest_neighbors(self, metric='euclidean', k=30):
 		"""
-		Build a ball tree to efficiently compare the the feature vectors
-		"""
-		self.btree = sklearn.neighbors.BallTree(self.feature_vectors,
-			leaf_size=30, metric=metric)
-
-	def load_tree(self, filename):
-		"""
-		Load the tree
-
-		Arguments:
-		filename : string
-			Location of the file
-		"""
-		try:
-			with open(filename, 'rb') as f:
-				self.btree = cPickle.load(f)
-		except IOError:
-			print "File %s not found" % filename
-
-	def save_tree(self, filename):
-		"""
-		Save the tree
-
-		Arguments:
-		filename : string
-			Location of the file
-		"""
-		try:
-			with open(filename, 'wb') as f:
-				cPickle.dump(self.btree, f)
-		except IOError:
-			print "File %s not found" % filename
-
-	# ====================================================================================================
-
-	def build_nearest_neighbors(self, k=10, metric='manhattan'):
-		"""
-		Build the matrix a k nearest neighbors for every paper in the tree
+		Build the matrix of nearest neighbors for every paper
 
 		Argument:
 		metric : string or callable (default: manhattan)
@@ -307,52 +281,35 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 			Manhattan distance is used by default as it is a good metric to compare
 			probability distributions
 		"""
-
-		try:
-			self.btree
-		except AttributeError:
-			self.build_tree(metric)
+		assert metric in sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS.keys(), \
+			"Invalid distance metric: choose between [%s]" % ', '.join(sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS.keys())
 
 		N,K = self.feature_vectors[:,:].shape
-		batch_size = 100
+		batch_size = 50
 
 		try:
-			self.h5file.createCArray(self.group, "neighbors_distances", tables.Float64Atom(), shape=(N,k))
-			self.h5file.createCArray(self.group, "neighbors_indices", tables.UInt64Atom(), shape=(N,k))
-			self.neighbors_distances = self.group.neighbors_distances
-			self.neighbors_indices = self.group.neighbors_indices
-		except Exception:
-			self.load("neighbors_distances")
-			self.load("neighbors_indices")
+			f = self.group.neighbors_distances
+			f._f_remove()
+			f = self.group.neighbors_indices
+			f._f_remove()
+		except AttributeError:
+			pass
+		self.h5file.create_carray(self.group, "neighbors_distances", tables.Float64Atom(), shape=(N,k))
+		self.h5file.create_carray(self.group, "neighbors_indices", tables.UInt64Atom(), shape=(N,k))
+		self.neighbors_distances = self.group.neighbors_distances
+		self.neighbors_indices = self.group.neighbors_indices
 
-		for i in range(N/batch_size):
-			mystdout.write("Query knn... %d/%d"%(i*batch_size,N), i*batch_size,N)
-			idx = range(i*batch_size, (i+1)*batch_size)
-			distances, indices = self.btree.query(self.feature_vectors[idx,:], k=k+1)
-			self.neighbors_distances[idx,:] = distances[:,1:]
-			self.neighbors_indices[idx,:] = indices[:,1:]
+		for i in np.arange(np.ceil(N/batch_size)):
+			mystdout.write("Query nearest neighbors... %d/%d"%(i*batch_size,N), i*batch_size,N)
+			idx = np.arange(i*batch_size, (i+1)*batch_size)
+			dist = sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS[metric](self.feature_vectors[idx], self.feature_vectors)
+			self.neighbors_indices[idx,:] = np.argsort(dist, axis=1)[:,:k]
+			self.neighbors_distances[idx,:] = np.sort(dist, axis=1)[:,:k]
+			self.h5file.flush()
 
-		mystdout.write("Query knn... %d/%d"%(i*batch_size,N), i*batch_size,N, ln=1)
+		mystdout.write("Query nearest neighbors done.", i*batch_size,N, ln=1)
 
 	# ====================================================================================================
-	
-	def get_nearest_neighbors(self, paper_id, k):
-		"""
-		Get the k nearest neighbors for a given paper_id
-
-		Arguments:
-		paper_id : int
-			Id of the paper
-		k : int
-			Number of neighbors to return
-		"""
-		try:
-			idx = self.idx[paper_id]
-			distances = self.neighbors_distances[idx,:k]
-			indices = self.neighbors_indices[idx,:k]
-			return distances, indices
-		except KeyError:
-			print "Unknown paper id: %s" % paper_id
 
 	def get_nearest_neighbors_online_2level(self, paper_id, k, percentile=1.0):
 		"""
@@ -450,14 +407,13 @@ class AuthorBasedRecommendation(RecommendationMethodInterface):
 
 	def train(self):
 		print "Query documents..."
-		sql_query_string = """SELECT id,authors
-				FROM Articles
-				WHERE %s
-				ORDER BY updated_at""" % self.query_condition
-		result = self.cursor.execute(sql_query_string).fetchall()
-		ids = np.array([e[0] for e in result], dtype='S16')
+		self.open_db_connection()
+		result = self.cursor.execute("""SELECT id,authors FROM Articles 
+			WHERE %s ORDER BY updated_at""" % self.query_condition).fetchall()
+		ids = np.array([e[0] for e in result], dtype='S30')
 		authors = np.array([e[1] for e in result])
 
+		self.ids = self.h5file.root.main.ids
 		if any(ids != self.ids[:]):
 			print "Reorder indices..."
 			idx = dict(zip(ids,range(len(ids))))
@@ -473,23 +429,40 @@ class AuthorBasedRecommendation(RecommendationMethodInterface):
 		self.author_vocabulary = list(set(self.author_vocabulary))
 		self.author_vocabulary = np.array(self.author_vocabulary)
 
-		print "Transform data and build neighbors..."
+		print "Transform data and build feature vectors..."
 		# Create the vectorizer
 		author_vectorizer = AuthorVectorizer(vocabulary=self.author_vocabulary)
 		# Vectorize the data
 		tdmat = author_vectorizer.transform(authors)
 		tdmat = tdmat.tocsr()
 		tdmat = scsp.csr_matrix((tdmat.data, tdmat.indices, tdmat.indptr),shape=tdmat.shape,dtype='float')
-		tdmat = normalize(tdmat, norm='l2', axis=1)
-		self.author_neighbors = tdmat.dot(tdmat.T)
+		self.feature_vectors = normalize(tdmat, norm='l2', axis=1)
+		del tdmat
 
-	def get_nearest_neighbors_authors(self, paper_id, k):
-		# Index of paper in feature vector matrix
-		idx = self.idx[paper_id]
-		rec = self.author_neighbors[idx].toarray()[0]
-		indices = np.argsort(rec)[::-1][:k]
-		distances = np.sort(rec)[::-1][:k]
-		distances = 0.3/distances
+		print "Save feature_vectors to hdf5 file..."
+		try:
+			f = self.group.feature_vectors
+			f._f_remove('recursive')
+			print "WARNING: sparse array /recommendation_methods/feature_vectors are overwritten"
+		except AttributeError:
+			pass
+		self.h5file.create_group(self.group, 'feature_vectors', 'Feature vectors sparse matrix')
+		util.store_sparse_mat(self.feature_vectors, 'feature_vectors', self.h5file, self.group.feature_vectors)		
+		self.h5file.flush()
+		
+	def build_nearest_neighbors(self, k=30):
+		rec = self.feature_vectors.dot(self.feature_vectors.T)
 
-		return distances, indices
+		try:
+			self.h5file.create_carray(self.group, "neighbors_distances", tables.Float64Atom(), shape=(N,k))
+			self.h5file.create_carray(self.group, "neighbors_indices", tables.UInt64Atom(), shape=(N,k))
+			self.neighbors_distances = self.group.neighbors_distances
+			self.neighbors_indices = self.group.neighbors_indices
+		except tables.NodeError:
+			self.load(self.group, "neighbors_distances")
+			self.load(self.group, "neighbors_indices")
+
+		self.neighbors_distances = np.argsort(rec, axis=1)[::-1][:,:k]
+		self.neighbors_indices   = np.sort(rec, axis=1)[::-1][:,:k]
+		self.h5file.flush()
 

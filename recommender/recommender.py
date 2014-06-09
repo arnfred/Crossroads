@@ -182,6 +182,9 @@ class ArXivRecommender():
 		obj = globals()[recommendation_method](self.h5file, self.db_path)
 		self.methods[recommendation_method] = obj
 
+	def get_nearest_neighbors_online(self, paper_id, k):
+		pass
+
 	# ====================================================================================================
 
 	def get_title(self, paper_id):
