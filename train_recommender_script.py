@@ -23,14 +23,14 @@ if __name__ == '__main__':
 
     # Files location
     db_path = 'recommender/data/arxiv.db'
-    h5file_path = 'recommender/data/new_recommender.h5'
+    h5file_path = 'recommender/data/new_recommender2.h5'
     vocab_filename = 'recommender/data/voc.txt'
 
     # Init recommender
     print "Initialize the recommender"
     recommender = ArXivRecommender(h5file_path, db_path, mode='w',
         start_date = '2000-01-01 00:00:00.000000',
-        end_date   = '2000-05-01 00:00:00.000000',
+        end_date   = '2014-05-01 00:00:00.000000',
         categories = set(['cs', 'math', 'q-bio', 'stat']))
     # Add the LDA based recommendation method
     recommender.add_recommendation_method('LDABasedRecommendation')
@@ -42,7 +42,7 @@ if __name__ == '__main__':
         batch_size          = 256,
         epochs_to_do        = 2)
 
-    print "Build nearest neighbors..."
-    recommender.methods['LDABasedRecommendation'].build_nearest_neighbors(k=20, metric='euclidean')
+    # print "Build nearest neighbors..."
+    # recommender.methods['LDABasedRecommendation'].build_nearest_neighbors(k=20, metric='euclidean')
 
 

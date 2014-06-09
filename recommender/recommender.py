@@ -158,13 +158,12 @@ class ArXivRecommender():
 		self.methods = dict()	# Dict of recommendation methods
 
 	def load_recommendation_methods(self):
-		self.methods = list()	# List of recommendation methods
-		self.weights = list()	# List of weight for recommendation combination
+		self.methods = dict()	# Dict of recommendation methods
 		# Iterate over the recommendation_methods group to get all recommendation methods
 		group = self.h5file.root.recommendation_methods
 		for i,n in enumerate(self.h5file.list_nodes(group)):
 			assert type(n) is tables.group.Group, "group /recommendation_methods should only contain groups"
-			class_name = g._v_name
+			class_name = n._v_name
 			obj = globals()[class_name](self.h5file, self.db_path)
 			obj.load_all()
 			self.methods[class_name] = obj

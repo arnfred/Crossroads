@@ -87,11 +87,11 @@ class RecommendationMethodInterface(object):
 			if type(node) is tables.group.Group:
 				# If the node is a group, 
 				# then it contains a sparse matrix and load it
-				name = g._v_pathname.split('/')[-1]
-				util.load_sparse_mat(name, self.h5file, self.group)
+				name = node._v_pathname.split('/')[-1]
+				setattr(self, name, util.load_sparse_mat(name, self.h5file, node))
 			else:
 				# Else the node is an array/Carray, then load it
-				self.load(group, node.name)
+				self.load(self.group, node.name)
 
 		# Build dictionary of indexes
 		ids = self.h5file.root.main.ids[:]
@@ -254,7 +254,9 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 			row_mins = np.min(gamma, axis=1)
 			row_mins = np.tile(row_mins, (self.K,1)).T
 			gamma[gamma == row_mins] = 0
-			return gamma / np.tile(gamma.sum(axis=1), (gamma.shape[1],1)).T
+			gamma /= np.tile(gamma.sum(axis=1), (gamma.shape[1],1)).T
+			gamma[np.isnan(gamma)] = 1./self.K
+			return gamma
 
 	# ====================================================================================================
 
