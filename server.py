@@ -14,7 +14,7 @@ urls = (
 render = web.template.render('templates/')
 
 # Init recommender
-recommender = ArXivRecommender('recommender/data/new_recommender.h5', 'recommender/data/arxiv.db')
+recommender = ArXivRecommender('recommender/data/recommender.h5', 'recommender/data/arxiv.db')
 # Init search engine
 search_engine = search.ArXivSearchEngine(recommender)
 
