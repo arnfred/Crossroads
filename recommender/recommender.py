@@ -32,7 +32,8 @@ class ArXivRecommender():
 		db_path : str
 			Location of the db file
 		mode : 'r','a','w'
-			Opening mode of hdf5 file (if it is not 'r', many arrays gets overwritten ad updated)
+			Opening mode of hdf5 file
+			WARNING: if ``mode`` is 'w', arrays gets overwritten at initialization
 		start_date : string
 			Starting date of the papers to process
 		end_date : string
@@ -167,6 +168,7 @@ class ArXivRecommender():
 			obj = globals()[class_name](self.h5file, self.db_path)
 			obj.load_all()
 			self.methods[class_name] = obj
+			print "%s method loaded" % class_name
 
 	# ====================================================================================================
 
@@ -183,7 +185,21 @@ class ArXivRecommender():
 		self.methods[recommendation_method] = obj
 
 	def get_nearest_neighbors_online(self, paper_id, k):
-		pass
+		
+		nmethods = len(self.methods)
+		weights = {}
+		distances = {}
+		
+		dist = 0.0
+		for name,method in self.methods.iteritems():
+			weights[name] = 1./nmethods
+			distances[name] = method.get_nearest_neighbors_online(paper_id)
+			dist += weights[name] * distances[name]
+		d = np.sort(dist)[1:k+1]
+		i = np.argsort(dist)[1:k+1]
+
+		return d,i
+
 
 	# ====================================================================================================
 

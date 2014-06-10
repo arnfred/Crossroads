@@ -12,10 +12,9 @@ from recommender import util
 
 from recommender.recommendation_methods import LDABasedRecommendation, AuthorBasedRecommendation
 
+from recommender import search
+
 h5file_path = 'recommender/data/new_recommender.h5'
 db_path = 'recommender/data/arxiv.db'
 
-recommender = ArXivRecommender(h5file_path, db_path, mode='r',
-	start_date = '2000-01-01 00:00:00.000000',
-	end_date   = '2014-05-01 00:00:00.000000',
-	categories = set(['cs', 'math', 'q-bio', 'stat']))
+recommender = ArXivRecommender(h5file_path, db_path, mode='a')

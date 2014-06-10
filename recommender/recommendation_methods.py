@@ -66,6 +66,12 @@ class RecommendationMethodInterface(object):
 		"""
 		raise NotImplementedError( "train not implemented for %s" % self.__class__.__name__ )
 
+	def get_nearest_neighbors_online(self, paper_id, k):
+		"""
+		Get the k nearest neighbors for a given paper_id in online computations
+		"""
+		raise NotImplementedError( "build_nearest_neighbors not implemented for %s" % self.__class__.__name__ )
+
 	def build_nearest_neighbors(self):
 		"""
 		Compute the nearest neighbors for all articles from the feature vectors
@@ -316,6 +322,10 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 		Get the k nearest neighbors for a given paper_id by computing them online
 		based on some metric
 		"""
+
+		print "WARNING: get_nearest_neighbors_online_2level function of LDABasedRecommendation " + \
+				"is deprecated and might not worked as planned !"
+
 		M = self.feature_vectors.shape[0]
 		try:
 			self.others_jaccard
@@ -364,6 +374,10 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 		distances = np.sort(distances)[:k]
 
 		return distances, indices
+
+	def get_nearest_neighbors_online(self, paper_id, metric='l2'):
+		dist = sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS[metric](self.feature_vectors[self.idx[paper_id]], self.feature_vectors)[0]
+		return dist
 
 	# ====================================================================================================
 
@@ -465,4 +479,12 @@ class AuthorBasedRecommendation(RecommendationMethodInterface):
 		self.neighbors_distances = np.argsort(rec, axis=1)[::-1][:,:k]
 		self.neighbors_indices   = np.sort(rec, axis=1)[::-1][:,:k]
 		self.h5file.flush()
+
+	def get_nearest_neighbors_online(self, paper_id):
+		# Compute cosine similarity
+		dist = self.feature_vectors[self.idx[paper_id]].dot(self.feature_vectors.T)
+		dist = dist.toarray()[0]
+		# Transform into a proper distance metric
+		dist = 1 - dist
+		return dist
 

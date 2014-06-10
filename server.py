@@ -14,39 +14,33 @@ urls = (
 render = web.template.render('templates/')
 
 # Init recommender
-def init_recommender() :
-    recommender = ArXivRecommender('recommender/data/recommender.h5', 'recommender/data/arxiv.db')
-    recommender.load_all()
-    return recommender
-recommender = init_recommender()
-
+recommender = ArXivRecommender('recommender/data/new_recommender.h5', 'recommender/data/arxiv.db')
 # Init search engine
 search_engine = search.ArXivSearchEngine(recommender)
 
-
 # Index page displays start page
 class index :
-    def GET(self):
-        return render.main("1401.6060")
+	def GET(self):
+		return render.main("1401.6060")
 
 class index_id :
-    def GET(self, paper_id) :
-        return render.main(str(paper_id))
+	def GET(self, paper_id) :
+		return render.main(str(paper_id))
 
 # Returns the nearest neighbors of a given id
 class document :
-    def GET(self, doc_id, k) :
-        return query.center(recommender, doc_id, int(k))
+	def GET(self, doc_id, k) :
+		return query.center(recommender, doc_id, int(k))
 
 class search_query :
-    def GET(self, decoded_terms) :
-        search_input = urllib.unquote(decoded_terms)
-        return search_engine.query(search_input)
+	def GET(self, decoded_terms) :
+		search_input = urllib.unquote(decoded_terms)
+		return search_engine.query(search_input)
 
 
 # Run the app
 if __name__ == "__main__" :
-    app = web.application(urls, globals())
-    app.run()
-
+	# Init app
+	app = web.application(urls, globals())
+	app.run()
 

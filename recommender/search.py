@@ -18,7 +18,7 @@ from arxiv.preprocess import SearchVectorizer
 from util import mystdout
 
 
-def train_search(recommender, start_date, end_date, categories):
+def train_search(recommender):
     """
     Train the search engine for a given recommender and save search data into 
     its hdf5 file
@@ -26,18 +26,10 @@ def train_search(recommender, start_date, end_date, categories):
     author_vectorizer = SearchVectorizer(category = 'author', training=True)
     title_vectorizer = SearchVectorizer(category = 'title', training=True) 
 
-    # Categories pattern used in SQL query
-    cat_query_condition = util.make_cat_query_condition(categories)
-    # Query for all documents we want
     recommender.open_db_connection()
     # Fetch all data
-    sql_query_string = """SELECT id,authors,title
-        FROM Articles
-        WHERE updated_at > '%s' AND updated_at < '%s'
-        %s
-        ORDER BY updated_at""" % \
-        (start_date, end_date, cat_query_condition)
-
+    sql_query_string = """SELECT id,authors,title FROM Articles
+        WHERE %s ORDER BY updated_at""" % recommender.query_condition
     print "Execute SQL query..."
     result = recommender.cursor.execute(sql_query_string).fetchall()
 
