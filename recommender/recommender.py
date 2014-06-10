@@ -187,16 +187,17 @@ class ArXivRecommender():
 	def get_nearest_neighbors_online(self, paper_id, k):
 		
 		nmethods = len(self.methods)
-		weights = {}
+		weights = {'LDABasedRecommendation':0.5, 'AuthorBasedRecommendation':0.5}
 		distances = {}
 		
 		dist = 0.0
 		for name,method in self.methods.iteritems():
-			weights[name] = 1./nmethods
 			distances[name] = method.get_nearest_neighbors_online(paper_id)
 			dist += weights[name] * distances[name]
 		d = np.sort(dist)[1:k+1]
 		i = np.argsort(dist)[1:k+1]
+
+		d/=d.sum()
 
 		return d,i
 
