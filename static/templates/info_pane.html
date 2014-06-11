@@ -1,26 +1,10 @@
 {{ #paper }}
-
-<script type="text/javascript"
-  src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
-</script>
-<script type="text/x-mathjax-config">
-MathJax.Hub.Config({
-  tex2jax: {inlineMath: [["$","$"],["\\(","\\)"]]}
-});
-</script>
-
-<p align="center"><small>{{ id }}</small></p>
-
-<div style="col-md-10">
-	<h3 align="center">{{ title }}</h3>
-</div>
-
-<p align="justify"><b>{{ authors }}</b></p>
-
+<p id="id"><small>{{ id }}</small></p>
+<p id="title">{{ title }}</p>
+<p id="authors"><b>{{ authors }}</b></p>
 <div class="panel panel-default" >
-       	<div class="panel-body" id="abstract">
-			<p align="justify" >{{ abstract }}</p>
-		</div>
+   	<div class="panel-body">
+		<p id="abstract">{{ abstract }}</p>
+	</div>
 </div>
-
 {{ /paper }}

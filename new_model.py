@@ -14,7 +14,17 @@ from recommender.recommendation_methods import LDABasedRecommendation, AuthorBas
 
 from recommender import search
 
-h5file_path = 'recommender/data/new_recommender.h5'
+h5file_path = 'recommender/data/recommender.h5'
 db_path = 'recommender/data/arxiv.db'
 
-recommender = ArXivRecommender(h5file_path, db_path, mode='a')
+recommender = ArXivRecommender(h5file_path, db_path, mode='r')
+self = recommender
+
+paper_id = '1402.1774'
+k = 30
+distances, indices, method_dist, method_weight = recommender.get_nearest_neighbors_online(paper_id, k)
+
+print "rank \t| distance | id%s| LDA%s| Authors" % (" "*16, " "*4)
+for rank,(idx,dist) in enumerate(zip(indices,distances)):
+	doc_id = self.ids[idx]
+	print "%d\t| %.4f   | %s%s| %.4f\t| %.4f" % (rank, dist, doc_id, " "*(18-len(doc_id)), method_dist['LDABasedRecommendation'][idx], method_dist['AuthorBasedRecommendation'][idx])

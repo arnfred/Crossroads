@@ -1,47 +1,64 @@
 {{ #is_shown }}
-<div id="search-box">
-	<div class="col-md-offset-3 col-md-6">
-		<h2 for="search">arXiv search</h2>
-		<div class="input-group">
-			<input type="text" class="form-control" name="query" placeholder="Enter arXiv id, author or keyword" value="{{ terms }}">
-			<span class="input-group-btn">
+<div class="col-md-offset-3 col-md-6">
+	
+	<!-- SEARCH BAR -->
+	<h2 for="search">arXiv search</h2>
+	<div class="input-group">
+		<input type="text" class="form-control" name="query" placeholder="Enter arXiv id, author or keyword" value="{{ terms }}">
+		<span class="input-group-btn">
 			<button type="button" class="btn btn-default" on-click="submit-click" on-keydown="search-keypress">Submit</button>
-			</span>
-		</div>
-		{{ ^results }}
-		<p id="search-text">Search by entering a keyword, an author or an arXiv id</p>		{{ /results }}
+		</span>
+	</div>
+	<!-- /SEARCH BAR -->
+	
+	<!-- search-help message displayed before any search query -->
+	{{ ^results }}
+	<p id="search-help">Search by entering a keyword, an author or an arXiv id</p>
+	{{ /results }}
+	<!-- /search-help -->
+	
+	<!-- search-results-wrapper -->
+	<div id="search-results-wrapper">
+
+		<!-- search-header message displayed when results are shown -->
 		{{ #results_shown }}
 		<p class="result-header">{{ length }} results found (in {{ duration }} seconds)</p>
 		{{ /results_shown }}
-		<div id="search-results">
-			{{ #no_result }}
-			<p> No result found for this query </p>
-			{{ /no_result }}
-			{{ #results }}
-			<div class="result" on-click="goto-graph">
-				<p class="result-title">{{ title }}</p>
-				<p class="result-author">{{ authors.join(", ") }}</p>
-			</div>
-			{{ /results }}
+		<!-- /search-header -->
+
+		<!-- no results found -->
+		{{ #no_result }}
+		<p> No result found for this query </p>
+		{{ /no_result }}
+
+		<!-- list results -->
+		{{ #results }}
+		<div class="result" on-click="goto-graph">
+			<p class="title">{{ title }}</p>
+			<p class="author">{{ authors.join(", ") }}</p>
 		</div>
-	<div class="col-md-12 text-center">
-		<ul id="pager" class="pagination">
-		  {{ #results_shown }}
-		  <li class='{{ is_first_page ? "pagin-button disabled" : "pagin-button"}}'>
-		  	<a href="#" class='{{ !is_first_page ? "pagin" : ""}}' on-click="first">First</a>
-		  </li>
-		  <li class='{{ is_first_page ? "pagin-button disabled" : "pagin-button"}}'>
-		  	<a href="#" class='{{ !is_first_page ? "pagin" : ""}}' on-click="previous">Previous</a></li>
-		  <li class='{{ is_last_page ? "pagin-button disabled" : "pagin-button"}}'>
-		  	<a href="#" class='{{ !is_last_page ? "pagin" : ""}}' on-click="next">Next</a>
-		  </li>
-		  <li class='{{ is_last_page ? "pagin-button disabled" : "pagin-button"}}'>
-		  	<a href="#" class='{{ !is_last_page ? "pagin" : ""}}' on-click="last">Last</a>
-		  </li>
-		  {{ /results_shown }}
-		</ul>
-	</div>
+		{{ /results }}
 
 	</div>
+	<!-- /search-results-wrapper -->
+
+	<!-- pagination -->
+	<ul id="pager" class="pagination">
+		{{ #results_shown }}
+		<li class='{{ is_first_page ? "pagin-button disabled" : "pagin-button"}}'>
+			<a href="#" class='{{ !is_first_page ? "pagin" : ""}}' on-click="first">First</a>
+		</li>
+		<li class='{{ is_first_page ? "pagin-button disabled" : "pagin-button"}}'>
+			<a href="#" class='{{ !is_first_page ? "pagin" : ""}}' on-click="previous">Previous</a></li>
+		<li class='{{ is_last_page ? "pagin-button disabled" : "pagin-button"}}'>
+			<a href="#" class='{{ !is_last_page ? "pagin" : ""}}' on-click="next">Next</a>
+		</li>
+		<li class='{{ is_last_page ? "pagin-button disabled" : "pagin-button"}}'>
+			<a href="#" class='{{ !is_last_page ? "pagin" : ""}}' on-click="last">Last</a>
+		</li>
+		{{ /results_shown }}
+	</ul>
+	<!-- /pagination -->
+
 </div>
 {{ /is_shown }}

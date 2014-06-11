@@ -1,0 +1,27 @@
+<!-- hide the header until the page is displayed -->
+{{ ^hide }}
+<div id="description" class="row">
+  <h2> How it works </h2>
+  <p>The algorithm takes a linear combinations between different kind of features to make recommendation:</p>
+  <p><h5>1</h5> The abstract of the article is used to retrieve a mixture of topics indicating what is the subject of the article. This mixture of topics is then compared to the one of other documents, and the closest set of articles is chosen for recommendation</p>
+  <p><h5>1</h5> The author collaborations based on the assumption that if somenone like some author's work, then it is likely that he will also like some other papers from the same author.</p>
+</div>
+
+<div id="header" class="row">
+  <div class="col-md-offset-1 col-md-1">Rank</div>
+  <div class="col-md-2">Total distance</div>
+  <div class="col-md-2">Paper id</div>
+  <div class="col-md-2">Topics distance</div>
+  <div class="col-md-2">Authors distance</div>
+</div>
+{{ /hide }}
+
+{{ #neighbors_list }}
+<div id="element" class="row">
+  <div class="col-md-offset-1 col-md-1">{{ rank }}</div>
+  <div class="col-md-2">{{ total_distance }}</div>
+  <div class="col-md-2">{{ id }}</div>
+  <div class="col-md-2">{{ topics_distance }}</div>
+  <div class="col-md-2">{{ authors_distance }}</div>
+</div>
+{{ /neighbors_list }}

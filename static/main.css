@@ -1,112 +1,171 @@
-body, html {
+/* GLOBAL STYLES
+-------------------------------------------------- */
+/* Padding below the footer and lighter body text */
+
+body {
+  color: #222;
+  font-family: 'Signika';
+  padding-top: 65px; 
+  padding-bottom: 40px;
+}
+
+
+/* CUSTOMIZE THE NAVBAR
+-------------------------------------------------- */
+
+/* Special class on .container surrounding .navbar, used for positioning it into place. */
+.navbar-wrapper {
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 20;
+}
+
+/* Flip around the padding for proper display in narrow viewports */
+.navbar-wrapper .container {
+  padding-right: 0;
+  padding-left: 0;
+}
+.navbar-wrapper .navbar {
+  padding-right: 15px;
+  padding-left: 15px;
+}
+
+.navbar-wrapper .navbar-brand {
+    font-size: 20pt;
+    color: #aaa;
+}
+
+
+
+/* CUSTOMIZE THE SEARCH PAGE
+-------------------------------------------------- */
+
+#search-page {
+    text-align: center;
     height: 100%;
     width: 100%;
-    background-color:#FAFAFA;
-    font-family: 'Signika';
+    z-index: 2;
+}
+#search-page p#search-help {
+    color: #000;
+    margin-top: 1em;
 }
 
-.row {
-    margin-right:0;
+#search-results-wrapper {
+    text-align: left;
+    font-weight: lighter;
+    line-height: 100%;
 }
-
-#query {
-	height: 10%;
+.result {
+    padding-bottom: 5px;
+    padding-top: 5px
 }
-
-#page {
-    padding-top: 52px;
-}
-
-#page, #graph, #info_pane, #search-box {
-    height: 90%;
-}
-
-#header {
-    position: absolute;
-    width:100%;
-    height: 42px;
-    background-color:#041A6C;
-}
-#title {
-    color:white;
-    text-indent: 50px;
-    font-size: 20pt;
-}
-
-/*
- * Search css
- */
-div#search-box {
-    width:100%;
-    position:absolute;
-    z-index:2;
-    padding:200px 0;
-}
-
-div#search-box h2 {
-    width:100%;
-    text-align:center;
-}
-
-div#search-box p#search-text {
-    width:100%;
-    text-align:center;
-    color: #555;
-    margin-top:1em;
-}
-
-div#search-results {
-    margin-top:1em;
-    text-align:left;
-}
-
-div#search-results p {
-    margin:0;
-    padding:0;
-}
-div#search-results p.result-author {
-    font-style:italic;
-}
-div#search-results p.result-title {
-    font-weight:bold;
-}
-div p.result-header {
+.result-header {
     text-align:center;
     font-size: 80%;
 }
-div#search-results p.result-footer {
-    text-align:center;
-    height:10%;
+.result .title {
+    font-weight:bold;
+    color: #333;
 }
-div.result {
-    margin-left:15px;
-    cursor:pointer;
-    padding:10px;
-}
+.result .author {
+    font-style:italic;
+    color: #666;
 
-div.result:hover {
+}
+.result {
+    margin-left: 15px;
+    cursor: pointer;
+}
+.result:hover {
     background: #f1f1f1;
 }
-
 #pager .pagin-button .pagin {
     color:black;
 }
 
-/*
- * Information panel css
- */
-#abstract {
-    height: 600px;
-    overflow: auto;
+
+
+/* CUSTOMIZE PAGE CONTENT
+-------------------------------------------------- */
+
+#main-page {
+    padding-right: 15px;
+    padding-left: 15px;
+    width: 100%;
+    height: 100%;
 }
 
-/*
- * SVG css
- */
+
+
+/* CUSTOMIZE INFORMATION PANEL
+-------------------------------------------------- */
+
+#info_pane {
+    padding-right: 5%;
+    padding-left: 5%;
+    text-align: center;
+    max-height: 500px;
+}
+#info_pane #id {
+    max-height: 5%;
+    font-size: normal;
+    color: #aaa;
+}
+#info_pane #title {
+    max-height: 20%;
+    font-size: 18pt;
+    font-weight: 900;
+}
+#info_pane #authors {
+    max-height: 15%;
+    font-size: normal;
+    font-weight: 400;
+    color: #aaa;
+}
+#info_pane #abstract {
+    max-height: 60%;
+    font-size: normal;
+    text-align: justify;
+    overflow-y: auto;
+}
+
+
+
+/* CUSTOMIZE GRAPH
+-------------------------------------------------- */
+
+#graph {
+    height: 500px;
+}
+
+
+
+/* CUSTOMIZE ALGORITHM DESCRIPTION PANEL
+-------------------------------------------------- */
+
+#algo_detail {
+    
+}
+
+#algo_detail #header {
+    text-align: center;
+    font-weight: bold;
+    padding-bottom: 1em;
+}
+
+#algo_detail #element {
+    text-align: center;
+}
+
+
+
+/* Graph SVG CSS
+-------------------------------------------------- */
 .node {
   stroke-width: 2.5px;
 }
-
 .link {
   fill: none;
   stroke: #9ecae1;

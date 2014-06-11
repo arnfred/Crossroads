@@ -187,19 +187,19 @@ class ArXivRecommender():
 	def get_nearest_neighbors_online(self, paper_id, k):
 		
 		nmethods = len(self.methods)
-		weights = {'LDABasedRecommendation':0.5, 'AuthorBasedRecommendation':0.5}
-		distances = {}
+		method_weight = {'LDABasedRecommendation':0.5, 'AuthorBasedRecommendation':0.5}
+		method_dist = {}
 		
-		dist = 0.0
+		distances = 0.0
 		for name,method in self.methods.iteritems():
-			distances[name] = method.get_nearest_neighbors_online(paper_id)
-			dist += weights[name] * distances[name]
-		d = np.sort(dist)[1:k+1]
-		i = np.argsort(dist)[1:k+1]
-
-		d/=d.sum()
-
-		return d,i
+			method_dist[name] = method.get_nearest_neighbors_online(paper_id)
+			distances += method_weight[name] * method_dist[name]
+		
+		indices = np.argsort(distances)[:k]
+		distances = np.sort(distances)[:k]
+		distances/=distances.sum()
+		
+		return distances, indices, method_dist, method_weight
 
 
 	# ====================================================================================================
@@ -219,6 +219,7 @@ class ArXivRecommender():
 		Return all the data concerning the paper with paper_id in a dictionary where keys are
 		column names and values are the data
 		"""
+		self.open_db_connection()
 		try:
 			data = self.cursor.execute("SELECT * FROM Articles WHERE id == ?", (paper_id,)).fetchone()
 			names = [row[0] for row in self.cursor.description]

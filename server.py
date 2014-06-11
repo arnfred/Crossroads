@@ -21,7 +21,7 @@ search_engine = search.ArXivSearchEngine(recommender)
 # Index page displays start page
 class index :
 	def GET(self):
-		return render.main("1401.6060")
+		return render.main("undefined")
 
 class index_id :
 	def GET(self, paper_id) :
