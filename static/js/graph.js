@@ -6,14 +6,16 @@ define([
 	"js!lib/colorbrewer.js"],
 	function(d3, _, pane, algo_detail) {
 
+		console.debug(algo_detail);
+
 	var graph = {};
 
 	var width = parseInt(d3.select("#graph").style("width")),
-		height = parseInt(d3.select("#graph").style("height")) - 10;
+		height = parseInt(d3.select("#graph").style("max-height")) - 10;
 
 	var svg = d3.select("#graph").append("svg")
-		.attr("width", width)
-		.attr("height", height);
+		.attr("width", 0)
+		.attr("height", 0);
 
 	var nodes = [],
 		links = [];
@@ -33,13 +35,13 @@ define([
 	// Add data to graph
 	graph.update = function(paper_id) {
 
+		svg.attr("width", width)
+			.attr("height", height);
+
 		// Load data and start force layout
-		d3.json("/d/" + paper_id + "-" + 8 + "/", function(error, neighbors_data) {
+		d3.json("/d/" + paper_id + "-" + 10 + "/", function(error, neighbors_data) {
 			graph_data = neighbors_data.graph_data
 			main_node_data = neighbors_data.main_node_data
-
-			console.debug(graph_data)
-			console.debug(main_node_data)
 
 			// Mapping between paper ids and array ids
 			graph_idx = _.map(graph_data.nodes, function(n){return n.id});

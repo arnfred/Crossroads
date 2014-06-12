@@ -94,7 +94,7 @@ body {
     padding-right: 15px;
     padding-left: 15px;
     width: 100%;
-    height: 100%;
+    max-height: 500px;
 }
 
 
@@ -106,26 +106,23 @@ body {
     padding-right: 5%;
     padding-left: 5%;
     text-align: center;
-    max-height: 500px;
+    height: 100%;
 }
 #info_pane #id {
-    max-height: 5%;
     font-size: normal;
-    color: #aaa;
+    color: #333;
 }
 #info_pane #title {
-    max-height: 20%;
     font-size: 18pt;
     font-weight: 900;
 }
 #info_pane #authors {
-    max-height: 15%;
     font-size: normal;
-    font-weight: 400;
-    color: #aaa;
+    font-weight: 200;
+    color: #333;
 }
 #info_pane #abstract {
-    max-height: 60%;
+    max-height: 300px;
     font-size: normal;
     text-align: justify;
     overflow-y: auto;
@@ -137,7 +134,7 @@ body {
 -------------------------------------------------- */
 
 #graph {
-    height: 500px;
+  max-height: 500px;
 }
 
 
@@ -146,17 +143,30 @@ body {
 -------------------------------------------------- */
 
 #algo_detail {
-    
+  background-color: #f3f3f3;
+  padding-right: 0;
+  padding-left: 0;
 }
 
-#algo_detail #header {
+#algo_detail p, h5 {
+  font-family:"Open sans", Helvetica, Arial;
+}
+
+#algo_detail .tab-element {
     text-align: center;
-    font-weight: bold;
     padding-bottom: 1em;
 }
 
-#algo_detail #element {
+#algo_detail .tab-element .small-padding {
     text-align: center;
+    padding-right: 5px;
+    padding-left: 5px;
+
+}
+#algo_detail .right-padding {
+    text-align: center;
+    padding-right: 15px;
+
 }
 
 

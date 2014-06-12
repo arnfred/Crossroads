@@ -19,15 +19,15 @@ def center(recommender, paper_id, k) :
 	graph = Graph(recommender.get_data)
 	# Populate graph
 	if paper_id != "":
-		distances, indices, method_dist, method_weight = graph_walk(recommender, graph, [(paper_id, 0)], k = k, visited = {})
+		distances, indices, method_dist, method_weight = graph_walk(recommender, graph, [(paper_id, 0)], k = k+1, visited = {})
 	graph_dict = graph.to_dict()
 	
 	main_node_data = []
-	for rank,(idx,dist) in enumerate(zip(indices,distances)):
+	for rank,(idx,dist) in enumerate(zip(indices[1:],distances[1:])):
 		doc_id = recommender.ids[idx]
 		element = {}
-		element['rank'] = rank
-		element['total_distance'] = "%.4f"%dist
+		element['rank'] = rank+1
+		element['total_distance'] = "%.4f"%abs(dist)
 		element['id'] = doc_id
 		element['topics_distance'] = "%.4f"%method_dist['LDABasedRecommendation'][idx]
 		element['authors_distance'] = "%.4f"%method_dist['AuthorBasedRecommendation'][idx]

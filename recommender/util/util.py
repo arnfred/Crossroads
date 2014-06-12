@@ -60,6 +60,32 @@ def store_carray(arr, name, h5file, group):
 	ds[:] = arr
 
 
+# ===================================================================================================================================
+# ================= Printer utility class
+# ===================================================================================================================================
+
+def sparse_tile(A, reps):
+	"""
+	Equivalent of numpy tile function for scipy sparse csr_matrix
+	WARNING: tested on vectors, may not work with matrices
+
+	Arguments:
+	A : scipy.crs.csr_matrix
+	reps : tuple of length 2
+		the number of repetitions on both axes
+	"""
+	msg = "This code only works for csr matrices"
+	assert(A.__class__ == sparse.csr.csr_matrix), msg
+
+	# TO DO
+	assert(A.shape[0] == 1), "Not working with non vector matrices"
+
+	data = np.tile(A.data, reps[0])
+	row = np.arange(reps[0]).repeat(len(A.indices))
+	col = np.tile(A.indices, reps[0])
+	shape = (reps[0]*A.shape[0], reps[1]*A.shape[1])
+	return sparse.csr_matrix((data,(row,col)), shape=shape)
+
 
 # ===================================================================================================================================
 # ================= Printer utility class

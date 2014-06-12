@@ -375,8 +375,13 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 
 		return distances, indices
 
-	def get_nearest_neighbors_online(self, paper_id, metric='l2'):
-		dist = sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS[metric](self.feature_vectors[self.idx[paper_id]], self.feature_vectors)[0]
+	def get_nearest_neighbors_online(self, paper_id, metric='total-variation'):
+		if metric == 'l2':
+			dist = sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS[metric](self.feature_vectors[self.idx[paper_id]], self.feature_vectors[:])[0]
+		elif metric == 'total-variation':
+			dist = 0.5 * np.array(abs(util.sparse_tile(self.feature_vectors[self.idx[paper_id]], (self.D,1)) - self.feature_vectors[:]).sum(axis=1).T)[0]
+		else:
+			raise Exception("Invalid metric")
 		return dist
 
 	# ====================================================================================================

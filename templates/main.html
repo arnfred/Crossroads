@@ -20,10 +20,10 @@ $def with(paper_id)
     <!-- NAVBAR =============================================================== -->
     <div class="navbar-wrapper">
       <div class="container">
-        <div class="navbar navbar-inverse navbar-fixed-top">
+        <div class="navbar navbar-inverse navbar-fixed-top headroom">
           <div class="container">
             <div class="navbar-header">
-              <a class="navbar-brand" href="/">Crossroads</a>
+              <a class="navbar-brand" href="/" on-click="remove_graph">Crossroads</a>
             </div>
           </div>
         </div>
@@ -33,14 +33,15 @@ $def with(paper_id)
 
     <!-- Search content ============================================================= -->
 
-
-    <div id="search-page" class="row">
+    <div class="container">
+      <div id="search-page" class="row">
+      </div>
     </div>
 
 
     <!-- Page content =============================================================== -->
 
-    <div id="main-page" class="row">
+    <div id="main-page" class="container">
         
         <div class="row">
           <div id="info_pane" class="col-md-6">
@@ -50,14 +51,8 @@ $def with(paper_id)
           </div>
         </div>
 
-        <hr></hr>
-
-        <div class="row">
-         <div id="algo_detail" class="col-md-offset-1  col-md-10">
-          </div>
+        <div id="algo_detail" class="row">
         </div>
-
-        <hr></hr>
 
     </div><!-- /#main-page -->
 
