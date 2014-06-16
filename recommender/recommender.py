@@ -224,7 +224,7 @@ class ArXivRecommender():
 		indices = indices[np.argsort(distances)]
 		distances = np.sort(distances)
 
-		return distances, indices, methods_dist
+		return distances, indices, methods_dist, methods_idx
 
 
 	# ====================================================================================================
