@@ -185,21 +185,46 @@ class ArXivRecommender():
 		self.methods[recommendation_method] = obj
 
 	def get_nearest_neighbors_online(self, paper_id, k):
-		
-		nmethods = len(self.methods)
-		method_weight = {'LDABasedRecommendation':0.5, 'AuthorBasedRecommendation':0.5}
-		method_dist = {}
-		
-		distances = 0.0
+		n_methods = len(self.methods)
+		methods_idx = dict(zip(self.methods.keys(),range(n_methods)))
+		methods_dist = np.zeros([n_methods, self.D])
+
+		weights = np.array([
+			[1.0, 0.0],
+			[0.0, 1.0],
+			[0.5, 0.5]])
+
+		# Get neighbors and distances for all methods
 		for name,method in self.methods.iteritems():
-			method_dist[name] = method.get_nearest_neighbors_online(paper_id)
-			distances += method_weight[name] * method_dist[name]
-		
-		indices = np.argsort(distances)[:k]
-		distances = np.sort(distances)[:k]
-		distances/=distances.sum()
-		
-		return distances, indices, method_dist, method_weight
+			methods_dist[methods_idx[name]] = method.get_nearest_neighbors_online(paper_id)
+
+		# Get the distances for each weight vector
+		distances = np.dot(weights, methods_dist)
+
+		indices_sorted = np.argsort(distances, axis=1)[:,:k]
+		distances_sorted = np.sort(distances, axis=1)[:,:k]
+
+		# Save each weight vector result separately
+		methods_dist = dict(zip(self.methods.keys(), distances))
+
+		# Get union of indices for all weight vectors	
+		indices_set = set()
+		for row in indices_sorted:
+			indices_set.update(row)
+		indices = np.array(list(indices_set))
+
+		# Get minimum distance for each of these weight vectors
+		distances = distances[:,indices]
+		distances = distances.min(axis=0)
+
+		# Rescale distances for a better display
+		distances /= distances.sum()
+
+		# Sort the final recommendations
+		indices = indices[np.argsort(distances)]
+		distances = np.sort(distances)
+
+		return distances, indices, methods_dist
 
 
 	# ====================================================================================================
