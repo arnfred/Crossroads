@@ -6,8 +6,6 @@ define([
 	"js!lib/colorbrewer.js"],
 	function(d3, _, pane, algo_detail) {
 
-		console.debug(algo_detail);
-
 	var graph = {};
 
 	var width = parseInt(d3.select("#graph").style("width")),
@@ -39,7 +37,7 @@ define([
 			.attr("height", height);
 
 		// Load data and start force layout
-		d3.json("/d/" + paper_id + "-" + 10 + "/", function(error, neighbors_data) {
+		d3.json("/d/" + paper_id + "-" + 3 + "/", function(error, neighbors_data) {
 			graph_data = neighbors_data.graph_data
 			main_node_data = neighbors_data.main_node_data
 

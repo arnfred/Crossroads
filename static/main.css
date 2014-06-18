@@ -151,25 +151,16 @@ body {
 #algo_detail p, h5 {
   font-family:"Open sans", Helvetica, Arial;
 }
-
-#algo_detail .tab-element {
-    text-align: center;
-    padding-bottom: 1em;
-}
-
-#algo_detail .tab-element .small-padding {
-    text-align: center;
-    padding-right: 5px;
-    padding-left: 5px;
-
-}
 #algo_detail .right-padding {
-    text-align: center;
     padding-right: 15px;
-
 }
-
-
+#algo_detail .col-centered {
+    float: none;
+    margin: 0 auto;
+}
+#algo_detail .vert-align-top {
+    vertical-align: top;
+}
 
 /* Graph SVG CSS
 -------------------------------------------------- */

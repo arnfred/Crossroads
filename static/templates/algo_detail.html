@@ -23,46 +23,118 @@
   </div>
 </div><!-- /row -->
 
-<div class="col-md-offset-1 col-md-10">
-  
-  <div class="row tab-element">
-    <div class="col-md-1">Rank</div>
-    {{ #neighbors_list }}
-    <div class="col-md-1">{{ rank }}</div>
-    {{ /neighbors_list }}
+<div class="row">
+  <div class="col-md-10"> 
+    <table class="table text-center">
+      <tr>
+        <td>Rank</td>
+        {{ #neighbors_list.final_recommendation }}
+          <td>{{ rank }}</td>
+        {{ /neighbors_list.final_recommendation }}
+      </tr>
+      <tr>
+        <td>Paper id</td>
+         {{ #neighbors_list.final_recommendation }}
+          <td>{{ id }}</td>
+        {{ /neighbors_list.final_recommendation }}
+      </tr>
+      <tr>
+        <td class="vert-align-top">Distance</td>
+        {{ #neighbors_list.final_recommendation }}
+        <td class="vert-align-top">
+          <div class="col-centered right-padding" style='background-color: red; width: 80px; height: {{ topics_distance * 100 }}px;'></div>
+          <div class="col-centered right-padding" style='background-color: blue; width: 80px; height: {{ authors_distance * 100 }}px;'></div>
+        </td>
+        {{ /neighbors_list.final_recommendation }}
+      </tr>
+    </table>
   </div>
-  <div class="row tab-element">
-    <div class="col-md-1">Paper id</div>
-    {{ #neighbors_list }}
-    <div class="col-md-1">{{ id }}</div>
-    {{ /neighbors_list }}
+  <div class="col-md-2">
+    <table>
+      <caption>Legend:</caption>
+      <tr>
+        <td><div class="right-padding" style='background-color: red; width: 15px;height: 1em;'></div></td>
+        <td>topics distance</td>
+      </tr>
+      <tr>
+        <td>
+          <div class="right-padding" style='background-color: blue; width: 15px;height: 1em;'></div></td>
+        <td>authors distance</td>
+      </tr>
+    </table>
   </div>
-  <div class="row tab-element">
-    <div class="col-md-1">Distance</div>
-    {{ #neighbors_list }}
-    <div class="col-md-1 small-padding">
-      <div style='background-color: red;
-              width: 100%;
-              height: {{ topics_distance * 100 }}px;'></div>
-      <div style='background-color: blue;
-              width: 100%;
-              height: {{ authors_distance * 100 }}px;'></div>
-    </div>
-    {{ /neighbors_list }}
-  </div>
-</div>
-<div class="col-md-1">
-  <table>
-    <caption>Legend:</caption>
-    <tr>
-      <th><div class="right-padding" style='background-color: red; width: 15px;height: 1em;'></div></th>
-      <th>topics distance</th>
-    </tr>
-    <tr>
-      <th><div class="right-padding" style='background-color: blue; width: 15px;height: 1em;'></div></th>
-      <th>authors distance</th>
-    </tr>
-  </table>
+</div><!-- /row -->
 
-</div><!-- /col-md-offset-1 col-md-10 -->
+<div class="row">
+  <div class="col-md-10"> 
+    <table class="table text-center">
+      <tr>
+        <td>Rank</td>
+        {{ #neighbors_list.LDABasedRecommendation }}
+        <td>{{ rank }}</td>
+        {{ /neighbors_list.LDABasedRecommendation }}
+      </tr>
+      <tr>
+        <td>Paper id</td>
+        {{ #neighbors_list.LDABasedRecommendation }}
+        <td>{{ id }}</td>
+        {{ /neighbors_list.LDABasedRecommendation }}
+      </tr>
+      <tr>
+        <td class="vert-align-top">Distance</td>
+        {{ #neighbors_list.LDABasedRecommendation }}
+        <td class="vert-align-top">
+          <div class="col-centered right-padding" style='background-color: red; width: 80px; height: {{ topics_distance * 100 }}px;'></div>
+        </td>
+        {{ /neighbors_list.LDABasedRecommendation }}
+      </tr>
+    </table>
+  </div>
+  <div class="col-md-2">
+    <table>
+      <caption>Legend:</caption>
+      <tr>
+        <td><div class="right-padding" style='background-color: red; width: 15px;height: 1em;'></div></td>
+        <td>topics distance</td>
+      </tr>
+    </table>
+  </div>
+</div><!-- /row -->
+
+<div class="row">
+  <div class="col-md-10"> 
+    <table class="table text-center">
+      <tr>
+        <td>Rank</td>
+        {{ #neighbors_list.AuthorBasedRecommendation }}
+        <td>{{ rank }}</td>
+        {{ /neighbors_list.AuthorBasedRecommendation }}
+      </tr>
+      <tr>
+        <td>Paper id</td>
+        {{ #neighbors_list.AuthorBasedRecommendation }}
+        <td>{{ id }}</td>
+        {{ /neighbors_list.AuthorBasedRecommendation }}
+      </tr>
+      <tr>
+        <td class="vert-align-top">Distance</td>
+        {{ #neighbors_list.AuthorBasedRecommendation }}
+        <td class="vert-align-top">
+          <div class="col-centered right-padding" style='background-color: blue; width: 80px; height: {{ authors_distance * 100 }}px;'></div>
+        </td>
+        {{ /neighbors_list.AuthorBasedRecommendation }}
+      </tr>
+    </table>
+  </div>
+  <div class="col-md-2">
+    <table>
+      <caption>Legend:</caption>
+      <tr>
+        <td><div class="right-padding" style='background-color: blue; width: 15px;height: 1em;'></div></td>
+        <td>authors distance</td>
+      </tr>
+    </table>
+  </div>
+</div><!-- /row -->
+
 {{ /hide }}
