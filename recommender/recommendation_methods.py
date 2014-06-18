@@ -1,3 +1,4 @@
+from multiprocessing import Pool
 import numpy as np
 import scipy.sparse as scsp
 import sqlite3
@@ -40,7 +41,7 @@ class RecommendationMethodInterface(object):
 		self.categories = set(misc_data['categories'].split('|'))
 		self.query_condition = util.make_query_condition(self.start_date, self.end_date, self.categories)
 
-	def get_nearest_neighbors(self, paper_id, k):
+	def get_nearest_neighbors(self, paper_id, k=None):
 		"""
 		Get the k nearest neighbors for a given paper_id
 
@@ -48,13 +49,38 @@ class RecommendationMethodInterface(object):
 		paper_id : int
 			Id of the paper
 		k : int
-			Number of neighbors to return
+			Number of neighbors to return. 
+			If None, the function returns +inf for all articles not in neighbors_indices
+
+		Returns:
+		distances : array
+			distances of the neighbors
+		indices : array (if k is not None)
+			indices of the neighbors.
+			If k is None, only distances is returned, then the indices are the indices of 
+			the vector distances
 		"""
 		try:
 			idx = self.idx[paper_id]
-			distances = self.neighbors_distances[idx,:k]
-			indices = self.neighbors_indices[idx,:k]
-			return distances, indices
+			if k is None:
+				# Get pre-computed values
+				distances = self.neighbors_distances[idx,:]
+				indices   = self.neighbors_indices[idx,:]
+				# Reshape it
+				distances = scsp.csr_matrix(
+					(
+						distances,
+						(np.zeros(len(distances)),indices)
+					), shape=(1,self.D)).toarray()[0]
+				# Set to +inf for unknown articles
+				distances[distances == 0] = np.finfo(np.float).max
+				# re-set to zero the distance of the paper with itself
+				distances[idx] = 0
+				return distances
+			else:
+				distances = self.neighbors_distances[idx,:k]
+				indices   = self.neighbors_indices[idx,:k]
+				return distances, indices
 		except KeyError:
 			print "Unknown paper id: %s" % paper_id
 		except AttributeError:
@@ -281,16 +307,20 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 		"""
 		Build the matrix of nearest neighbors for every paper
 
+		!!! WARNING !!!
+		Only l2 metric works with sparse feature vectors
+
 		Argument:
-		metric : string or callable (default: manhattan)
+		metric : string or callable (default: euclidean)
 			A metric used to compare vectors, or a custom function
 			Manhattan distance is used by default as it is a good metric to compare
 			probability distributions
 		"""
+
 		assert metric in sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS.keys(), \
 			"Invalid distance metric: choose between [%s]" % ', '.join(sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS.keys())
 
-		N,K = self.feature_vectors[:,:].shape
+		N = self.feature_vectors.shape[0]
 		batch_size = 50
 
 		try:
@@ -469,8 +499,9 @@ class AuthorBasedRecommendation(RecommendationMethodInterface):
 		util.store_sparse_mat(self.feature_vectors, 'feature_vectors', self.h5file, self.group.feature_vectors)		
 		self.h5file.flush()
 		
-	def build_nearest_neighbors(self, k=30):
-		rec = self.feature_vectors.dot(self.feature_vectors.T)
+	def build_nearest_neighbors(self, k=50):
+		N = self.feature_vectors.shape[0]
+		batch_size = 50
 
 		try:
 			self.h5file.create_carray(self.group, "neighbors_distances", tables.Float64Atom(), shape=(N,k))
@@ -481,9 +512,17 @@ class AuthorBasedRecommendation(RecommendationMethodInterface):
 			self.load(self.group, "neighbors_distances")
 			self.load(self.group, "neighbors_indices")
 
-		self.neighbors_distances = np.argsort(rec, axis=1)[::-1][:,:k]
-		self.neighbors_indices   = np.sort(rec, axis=1)[::-1][:,:k]
-		self.h5file.flush()
+		rec = self.feature_vectors.dot(self.feature_vectors.T)
+
+		for i in np.arange(np.ceil(N/batch_size)):
+			mystdout.write("Query nearest neighbors... %d/%d"%(i*batch_size,N), i*batch_size,N)
+			idx = np.arange(i*batch_size, (i+1)*batch_size)
+			dist = rec[idx,:].toarray()
+			self.neighbors_indices[idx,:] = np.argsort(dist, axis=1)[::-1,:][:,:k]
+			self.neighbors_distances[idx,:] = np.sort(dist, axis=1)[::-1,:][:,:k]
+			self.h5file.flush()
+
+		mystdout.write("Query nearest neighbors done.", i*batch_size,N, ln=1)
 
 	def get_nearest_neighbors_online(self, paper_id):
 		# Compute cosine similarity

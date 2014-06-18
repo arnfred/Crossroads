@@ -1,5 +1,6 @@
 import json
 from itertools import chain
+import numpy as np
 
 
 def center(recommender, paper_id, k) :
@@ -19,31 +20,32 @@ def center(recommender, paper_id, k) :
 	graph = Graph(recommender.get_data)
 	# Populate graph
 	if paper_id != "":
-		distances, indices, method_dist, methods_idx = graph_walk(recommender, graph, [(paper_id, 0)], k = k+1, visited = {})
+		distances, indices, methods_dist, methods_idx = graph_walk(recommender, graph, to_visit = [(paper_id,0)], k = k+1, max_level = 2, visited = {})
+		# distances, indices, methods_dist, methods_idx = graph_walk_v2(recommender, graph, paper_id, k)
 	graph_dict = graph.to_dict()
 	
 	main_node_data = {'final_recommendation':[], 'LDABasedRecommendation':[], 'AuthorBasedRecommendation':[]}
-	for rank,(idx,dist) in enumerate(zip(indices[1:],distances[1:])):
+	for rank,(idx,dist) in enumerate(zip(indices[1:k],distances[1:k])):
 		doc_id = recommender.ids[idx]
 		element = {}
 		element['rank'] = rank+1
 		element['total_distance'] = "%.4f"%abs(dist)
 		element['id'] = doc_id
-		element['topics_distance'] = "%.4f"%method_dist['LDABasedRecommendation'][idx]
-		element['authors_distance'] = "%.4f"%method_dist['AuthorBasedRecommendation'][idx]
+		element['topics_distance'] = "%.4f"%methods_dist['LDABasedRecommendation'][idx]
+		element['authors_distance'] = "%.4f"%methods_dist['AuthorBasedRecommendation'][idx]
 		main_node_data['final_recommendation'].append(element)
 
-	indices_sorted = np.argsort(distances, axis=1)[:,:k]
-	distances_sorted = np.sort(distances, axis=1)[:,:k]
 	for name,idx in methods_idx.iteritems():
-		for rank,(idx,dist) in enumerate(zip(indices_sorted[1:],distances_sorted[1:])):
+		indices_sorted = np.argsort(methods_dist[name])[1:k]
+		distances_sorted = np.sort(methods_dist[name])[1:k]
+		for rank,(idx,dist) in enumerate(zip(indices_sorted,distances_sorted)):
 			doc_id = recommender.ids[idx]
 			element = {}
 			element['rank'] = rank+1
 			element['total_distance'] = "%.4f"%abs(dist)
 			element['id'] = doc_id
-			element['topics_distance'] = "%.4f"%method_dist['LDABasedRecommendation'][idx]
-			element['authors_distance'] = "%.4f"%method_dist['AuthorBasedRecommendation'][idx]
+			element['topics_distance'] = "%.4f"%methods_dist['LDABasedRecommendation'][idx]
+			element['authors_distance'] = "%.4f"%methods_dist['AuthorBasedRecommendation'][idx]
 			main_node_data[name].append(element)
 
 	return json.dumps({'graph_data':graph_dict, 'main_node_data':main_node_data})
@@ -58,15 +60,37 @@ def graph_walk(recommender, graph, to_visit = [], k = 5, max_level = 2, visited 
 		parent_id, level = to_visit.pop()
 		visited[parent_id] = True
 		graph.add(parent_id, parent_id, 0.0, 1)  
-		distances, indices, method_dist, methods_idx = recommender.get_nearest_neighbors_online(parent_id, k)  
+		distances, indices, methods_dist, methods_idx = recommender.get_nearest_neighbors(parent_id, k)  
 		if len(visited) == 1:
-			center_node_data = distances, indices, method_dist, methods_idx
+			center_node_data = distances, indices, methods_dist, methods_idx
 		for dist, node_id in zip(distances, recommender.ids[indices]) :
 			# Anyway, add node to graph (if it exists, the new link is added)
 			graph.add(node_id, parent_id, dist, level + 1)
 			# If we haven't seen this node we continue
 			if node_id not in visited and level < max_level-1 :
 				to_visit.append((node_id, level + 1))
+	return center_node_data
+
+def graph_walk_v2(recommender, graph,  paper_id, k = 5) :
+	""" Given a paper id, we find the nearest neighbors and add them to the
+	graph, then find the nearest neighbors of these and add those to the graph
+	recursing k steps down """
+	
+	parent_id = paper_id
+	graph.add(paper_id, parent_id, 0.0, 1)  
+	distances, indices, methods_dist, methods_idx = recommender.get_nearest_neighbors_online(parent_id, k)  
+	center_node_data = distances, indices, methods_dist, methods_idx
+	
+	for dist, node_id in zip(distances, recommender.ids[indices]) :
+		# Anyway, add node to graph (if it exists, the new link is added)
+		graph.add(node_id, parent_id, dist, 1)
+	
+	for parent_id in recommender.ids[indices]:
+		distances, indices, methods_dist, methods_idx = recommender.get_nearest_neighbors_online(node_id, k)  
+		for dist, node_id in zip(distances, recommender.ids[indices]) :
+			if parent_id in graph.nodes and node_id in graph.nodes:
+				graph.nodes[node_id]['links'][parent_id] = dist
+
 	return center_node_data
 
 class Graph(object) :
