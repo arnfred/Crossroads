@@ -1,4 +1,3 @@
-from multiprocessing import Pool
 import numpy as np
 import scipy.sparse as scsp
 import sqlite3
@@ -72,8 +71,10 @@ class RecommendationMethodInterface(object):
 						distances,
 						(np.zeros(len(distances)),indices)
 					), shape=(1,self.D)).toarray()[0]
-				# Set to +inf for unknown articles
-				distances[distances == 0] = np.finfo(np.float).max
+				# Set to 1 for unknown articles (i.e. maximum possible value)
+				mask = np.ones(distances.shape[0], dtype=np.bool)
+				mask[[indices]] = False
+				distances[mask] = 1
 				# re-set to zero the distance of the paper with itself
 				distances[idx] = 0
 				return distances
@@ -154,13 +155,15 @@ class RecommendationMethodInterface(object):
 
 class LDABasedRecommendation(RecommendationMethodInterface):
 
-	def train(self, K, vocab_filename, batch_size=512, epochs_to_do=2):
+	def train(self, K, vocab_filename, n_titles=0, batch_size=512, epochs_to_do=2):
 		"""
 		Train the recommender based on LDA
 
 		Arguments:
 		K : int
 			Number of topics
+		w_title : int
+			Weight of the title compared to the abstract (which is 1)
 		vocab_filename : string
 			Location of vocabulary file
 		batch_size : int (default: 512)
@@ -183,6 +186,8 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 		self.parser = ArticleParser(self.vocabulary)
 		# Number of topics
 		self.K = K
+		# Weight of the titles
+		self.w_title = w_title
 		# Vocabulary size
 		self.W = len(self.parser.vocabulary_)
 		# Initialize the online VB algorithm with alpha=1/K, eta=1/K, tau_0=1024, kappa=0.7
@@ -208,7 +213,7 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 
 			# Query for all documents we want
 			query = self.cursor.execute(
-				"""SELECT abstract,id FROM Articles WHERE %s ORDER BY updated_at""" % self.query_condition)
+				"""SELECT abstract,title,id FROM Articles WHERE %s ORDER BY updated_at""" % self.query_condition)
 
 			# Run over the query results and feed them to the model per batch
 			while True:
@@ -219,7 +224,7 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 				if len(result) == 0:
 					break
 
-				cur_docset = [i for i,j in result] # Documents set
+				cur_docset = [(e[1]+u' ')*self.w_title + e[0] for e in result] # Documents set
 				docs_seen += len(result)
 
 				if epoch < epochs_to_do-1:
@@ -239,7 +244,7 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 					gamma = self.olda.update_gamma(cur_docset)
 
 					# Keep track of the feature vectors for each documment
-					ids += [str(j) for i,j in result] # ids corresponding to current documents
+					ids += [str(e[2]) for e in result] # ids corresponding to current documents
 					self.feature_vectors += self._compute_feature_vectors(gamma, addSmoothing=False).tolist()
 
 				mystdout.write("Epoch %d: (%d/%d docs seen), perplexity = %e" % \
@@ -303,7 +308,7 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 
 	# ====================================================================================================
 
-	def build_nearest_neighbors(self, metric='euclidean', k=30):
+	def build_nearest_neighbors(self, metric='euclidean', k=50):
 		"""
 		Build the matrix of nearest neighbors for every paper
 
@@ -317,8 +322,8 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 			probability distributions
 		"""
 
-		assert metric in sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS.keys(), \
-			"Invalid distance metric: choose between [%s]" % ', '.join(sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS.keys())
+		assert metric in sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS.keys() or metric is 'total-variation', \
+			"Invalid distance metric: choose between [%s, total-variation]" % ', '.join(sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS.keys())
 
 		N = self.feature_vectors.shape[0]
 		batch_size = 50
@@ -338,9 +343,12 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 		for i in np.arange(np.ceil(N/batch_size)):
 			mystdout.write("Query nearest neighbors... %d/%d"%(i*batch_size,N), i*batch_size,N)
 			idx = np.arange(i*batch_size, (i+1)*batch_size)
-			dist = sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS[metric](self.feature_vectors[idx], self.feature_vectors)
-			self.neighbors_indices[idx,:] = np.argsort(dist, axis=1)[:,:k]
-			self.neighbors_distances[idx,:] = np.sort(dist, axis=1)[:,:k]
+			if metric is 'total-variation':
+				dist = 0.5 * sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS['l1'](self.feature_vectors[idx], self.feature_vectors)
+			else:
+				dist = sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS[metric](self.feature_vectors[idx], self.feature_vectors)
+			self.neighbors_indices[idx,:] = np.argsort(dist, axis=1)[:,1:k+1]
+			self.neighbors_distances[idx,:] = np.sort(dist, axis=1)[:,1:k+1]
 			self.h5file.flush()
 
 		mystdout.write("Query nearest neighbors done.", i*batch_size,N, ln=1)
@@ -406,10 +414,10 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 		return distances, indices
 
 	def get_nearest_neighbors_online(self, paper_id, metric='total-variation'):
-		if metric == 'l2':
-			dist = sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS[metric](self.feature_vectors[self.idx[paper_id]], self.feature_vectors[:])[0]
-		elif metric == 'total-variation':
+		if metric == 'total-variation':
 			dist = 0.5 * np.array(abs(util.sparse_tile(self.feature_vectors[self.idx[paper_id]], (self.D,1)) - self.feature_vectors[:]).sum(axis=1).T)[0]
+		elif metric in sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS.keys():
+			dist = sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS[metric](self.feature_vectors[self.idx[paper_id]], self.feature_vectors[:])[0]
 		else:
 			raise Exception("Invalid metric")
 		return dist
@@ -499,27 +507,35 @@ class AuthorBasedRecommendation(RecommendationMethodInterface):
 		util.store_sparse_mat(self.feature_vectors, 'feature_vectors', self.h5file, self.group.feature_vectors)		
 		self.h5file.flush()
 		
-	def build_nearest_neighbors(self, k=50):
+	def build_nearest_neighbors(self, k=100):
 		N = self.feature_vectors.shape[0]
-		batch_size = 50
+		batch_size = 100
 
 		try:
-			self.h5file.create_carray(self.group, "neighbors_distances", tables.Float64Atom(), shape=(N,k))
-			self.h5file.create_carray(self.group, "neighbors_indices", tables.UInt64Atom(), shape=(N,k))
-			self.neighbors_distances = self.group.neighbors_distances
-			self.neighbors_indices = self.group.neighbors_indices
-		except tables.NodeError:
-			self.load(self.group, "neighbors_distances")
-			self.load(self.group, "neighbors_indices")
-
-		rec = self.feature_vectors.dot(self.feature_vectors.T)
+			f = self.group.neighbors_distances
+			f._f_remove()
+			f = self.group.neighbors_indices
+			f._f_remove()
+		except AttributeError:
+			pass
+		self.h5file.create_carray(self.group, "neighbors_distances", tables.Float64Atom(), shape=(N,k))
+		self.h5file.create_carray(self.group, "neighbors_indices", tables.UInt64Atom(), shape=(N,k))
+		self.neighbors_distances = self.group.neighbors_distances
+		self.neighbors_indices = self.group.neighbors_indices
+		
+		sim = self.feature_vectors.dot(self.feature_vectors.T)
 
 		for i in np.arange(np.ceil(N/batch_size)):
 			mystdout.write("Query nearest neighbors... %d/%d"%(i*batch_size,N), i*batch_size,N)
 			idx = np.arange(i*batch_size, (i+1)*batch_size)
-			dist = rec[idx,:].toarray()
-			self.neighbors_indices[idx,:] = np.argsort(dist, axis=1)[::-1,:][:,:k]
-			self.neighbors_distances[idx,:] = np.sort(dist, axis=1)[::-1,:][:,:k]
+			
+			# Unsparse the cosine similarity, and convert it to a distance
+			dist = sim[idx,:].toarray()
+			dist = 1 - dist
+			dist[dist < 0] = 0 # For floating point approximations
+
+			self.neighbors_indices[idx,:] = np.argsort(dist, axis=1)[:,1:k+1]
+			self.neighbors_distances[idx,:] = np.sort(dist, axis=1)[:,1:k+1]
 			self.h5file.flush()
 
 		mystdout.write("Query nearest neighbors done.", i*batch_size,N, ln=1)
@@ -531,4 +547,5 @@ class AuthorBasedRecommendation(RecommendationMethodInterface):
 		# Transform into a proper distance metric
 		dist = 1 - dist
 		return dist
+
 

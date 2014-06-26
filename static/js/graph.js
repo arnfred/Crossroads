@@ -37,7 +37,7 @@ define([
 			.attr("height", height);
 
 		// Load data and start force layout
-		d3.json("/d/" + paper_id + "-" + 3 + "/", function(error, neighbors_data) {
+		d3.json("/d/" + paper_id + "-" + 10 + "/", function(error, neighbors_data) {
 			graph_data = neighbors_data.graph_data
 			main_node_data = neighbors_data.main_node_data
 
@@ -131,7 +131,7 @@ define([
 					graph.update(n.id);
 				})
 				.attr("r", function(n) {
-					return 15 - 2.5*n.level;
+					return 15 - 2.5*n.level*n.level;
 				})
 				.attr("fill", function(n) {
 						return  d3.rgb(colors(n.level));
