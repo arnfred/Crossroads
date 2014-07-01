@@ -1,4 +1,5 @@
-define(["ractive", "lib/underscore", "text!templates/algo_detail.html"], function(R, _, pane_template) {
+define(["ractive", 
+	"text!templates/algo_detail.html"], function(R, pane_template) {
 
 	////////////////////////////////////////
 	//                                    //

@@ -29,10 +29,10 @@ def center(recommender, paper_id, k) :
 		doc_id = recommender.ids[idx]
 		element = {}
 		element['rank'] = rank+1
-		element['total_distance'] = "%.4f"%abs(dist)
+		element['total_distance'] = "%.4f"%(1-abs(dist))
 		element['id'] = doc_id
-		element['topics_distance'] = "%.4f"%methods_dist['LDABasedRecommendation'][idx]
-		element['authors_distance'] = "%.4f"%methods_dist['AuthorBasedRecommendation'][idx]
+		element['topics_distance'] = "%.4f"%(1-methods_dist['LDABasedRecommendation'][idx])
+		element['authors_distance'] = "%.4f"%(1-methods_dist['AuthorBasedRecommendation'][idx])
 		main_node_data['final_recommendation'].append(element)
 
 	for name,idx in methods_idx.iteritems():
@@ -42,10 +42,10 @@ def center(recommender, paper_id, k) :
 			doc_id = recommender.ids[idx]
 			element = {}
 			element['rank'] = rank+1
-			element['total_distance'] = "%.4f"%abs(dist)
+			element['total_distance'] = "%.4f"%(1-abs(dist))
 			element['id'] = doc_id
-			element['topics_distance'] = "%.4f"%methods_dist['LDABasedRecommendation'][idx]
-			element['authors_distance'] = "%.4f"%methods_dist['AuthorBasedRecommendation'][idx]
+			element['topics_distance'] = "%.4f"%(1-methods_dist['LDABasedRecommendation'][idx])
+			element['authors_distance'] = "%.4f"%(1-methods_dist['AuthorBasedRecommendation'][idx])
 			main_node_data[name].append(element)
 
 	return json.dumps({'graph_data':graph_dict, 'main_node_data':main_node_data})
