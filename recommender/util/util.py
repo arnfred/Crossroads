@@ -2,8 +2,11 @@ import re
 import numpy as np
 from scipy import sparse
 from sys import stdout
+from itertools import izip
 import time
 import tables
+
+from compiler.ast import flatten
 
 
 # ===================================================================================================================================
@@ -61,7 +64,7 @@ def store_carray(arr, name, h5file, group):
 
 
 # ===================================================================================================================================
-# ================= Printer utility class
+# ================= Sparse utility functions
 # ===================================================================================================================================
 
 def sparse_tile(A, reps):
@@ -86,6 +89,49 @@ def sparse_tile(A, reps):
 	shape = (reps[0]*A.shape[0], reps[1]*A.shape[1])
 	return sparse.csr_matrix((data,(row,col)), shape=shape)
 
+def sparse_sort(m, axis=1, reverse=False):
+	"""
+	Sort a sparse matrix along rows or columns
+
+	Arguments:
+	m : sparse matrix
+		Any Scipy sparse matrix
+	axis : 0,1
+		Axis along which to sort
+	reverse : boolean
+		Indicate if the sort needs to be done in reverse order
+	
+	Returns:
+	m_sorted : CSR sparse matrix
+		matrix m sorted along axis ``axis``
+	m_argsorted : CSR sparse matrix
+		indices of matrix m sorted along axis ``axis``
+	"""
+	if m.__class__ is not sparse.coo.coo_matrix:
+		m = m.tocoo()
+
+	tuples = izip(m.row, m.col, m.data)
+	tuples_sorted = sorted(tuples, key=lambda x: (x[1-axis], x[2]), reverse=True)
+	tuples_sorted = sorted(tuples_sorted, key=lambda x: x[0])
+	array = np.array(tuples_sorted)
+
+	rows = array[:,0].astype(np.int)
+	cols = array[:,1].astype(np.int)
+
+	# Get sorted columns corresponding to rows
+	cols_sorted = flatten([range(e) for e in np.bincount(rows)])
+
+	# Get everything into a sparse matrix
+	ij = np.vstack((rows,cols_sorted))
+	m_sorted = sparse.csr_matrix( (array[:,2], ij), shape=m.shape)
+	m_argsorted = sparse.csr_matrix( (cols, ij), shape=m.shape)
+
+	# Put eveything in ascending order if reverse is False
+	if not reverse:
+		m_sorted = m_sorted[:,::-1]
+		m_argsorted = m_argsorted[:,::-1]
+
+	return m_sorted, m_argsorted
 
 # ===================================================================================================================================
 # ================= Printer utility class
