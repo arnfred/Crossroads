@@ -111,8 +111,7 @@ def sparse_sort(m, axis=1, reverse=False):
 		m = m.tocoo()
 
 	tuples = izip(m.row, m.col, m.data)
-	tuples_sorted = sorted(tuples, key=lambda x: (x[1-axis], x[2]), reverse=True)
-	tuples_sorted = sorted(tuples_sorted, key=lambda x: x[0])
+	tuples_sorted = sorted(tuples, key=lambda x: (x[0], x[1-axis], x[2]), reverse=True)
 	array = np.array(tuples_sorted)
 
 	rows = array[:,0].astype(np.int)

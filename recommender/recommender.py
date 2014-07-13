@@ -198,8 +198,7 @@ class ArXivRecommender():
 
 		# Get neighbors and distances for all methods
 		for name,method in self.methods.iteritems():
-			distances = method.get_nearest_neighbors(paper_id)
-			methods_dist[methods_idx[name]] = distances
+			methods_dist[methods_idx[name]] = method.get_nearest_neighbors(paper_id)
 
 		# Get the actual distances and indices of the neighbors
 		distances, indices, methods_dist = self._get_nearest_neighbors(methods_dist, weights, k)
@@ -214,8 +213,8 @@ class ArXivRecommender():
 		# Get the distances for each weight vector
 		distances = np.dot(weights, methods_dist)
 
-		indices_sorted = np.argsort(distances, axis=1)[:,:k]
-		distances_sorted = np.sort(distances, axis=1)[:,:k]
+		# Sort the first k nearest neighbors
+		indices_sorted = np.argpartition(distances, k, axis=1)[:,:k]
 
 		# Save each weight vector result separately
 		methods_dist = dict(zip(self.methods.keys(), distances))
@@ -235,8 +234,9 @@ class ArXivRecommender():
 		distances *= 2
 
 		# Sort the final recommendations
-		indices = indices[np.argsort(distances)]
-		distances = np.sort(distances)
+		indices_sorted = np.argsort(distances)
+		indices = indices[indices_sorted]
+		distances = distances[indices_sorted]
 
 		# distances[distances < 0.1] = 0.1
 

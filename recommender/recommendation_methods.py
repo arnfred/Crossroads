@@ -325,7 +325,7 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 		assert metric in sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS.keys() or metric is 'total-variation', \
 			"Invalid distance metric: choose between [%s, total-variation]" % ', '.join(sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS.keys())
 
-		N = self.feature_vectors.shape[0]
+		N = float(self.feature_vectors.shape[0])
 		batch_size = 50
 
 		try:
@@ -508,7 +508,7 @@ class AuthorBasedRecommendation(RecommendationMethodInterface):
 		self.h5file.flush()
 		
 	def build_nearest_neighbors(self, k=100):
-		N = self.feature_vectors.shape[0]
+		N = float(self.feature_vectors.shape[0])
 		batch_size = 100
 
 		try:
