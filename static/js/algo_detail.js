@@ -1,5 +1,5 @@
-define(["ractive", 
-	"text!templates/algo_detail.html"], function(R, pane_template) {
+define(["ractive", "js/barplot",
+	"text!templates/algo_detail.html"], function(R, barplot, pane_template) {
 
 	////////////////////////////////////////
 	//                                    //
@@ -32,6 +32,7 @@ define(["ractive",
 	view.display = function(n) {
 		view.set("hide", false);
 	    view.set("neighbors_list", n);
+	    barplot();
 	}
 
 	////////////////////////////////////////
