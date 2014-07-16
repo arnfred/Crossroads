@@ -79,10 +79,10 @@ def graph_creation(recommender, paper_id, k):
 				if child_id not in visited:
 					to_visit.append((child_id, new_level))
 
-	# # Remove nodes at max_level that have only one parent
-	# for node,data in graph.nodes(data=True):
-	# 	if data['level'] == max_level and graph.in_degree(node) == 1:
-	# 		graph.remove_node(node)
+	# Remove nodes at max_level that have only one parent
+	for node,data in graph.nodes(data=True):
+		if data['level'] == max_level and graph.in_degree(node) == 1:
+			graph.remove_node(node)
 
 	return center_node_data
 

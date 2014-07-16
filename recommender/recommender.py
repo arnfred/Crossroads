@@ -189,58 +189,55 @@ class ArXivRecommender():
 	def get_nearest_neighbors(self, paper_id, k):
 		n_methods = len(self.methods)
 		methods_idx = dict(zip(self.methods.keys(),range(n_methods)))
-		methods_dist = np.zeros([n_methods, self.D])
+		methods_sim = np.zeros((n_methods, self.D), dtype=np.float)
 
 		weights = np.array([
 			[1.0, 0.0],
 			[0.0, 1.0],
 			[0.5, 0.5]])
 
-		# Get neighbors and distances for all methods
+		# Get neighbors and similarity for all methods
 		for name,method in self.methods.iteritems():
-			methods_dist[methods_idx[name]] = method.get_nearest_neighbors(paper_id)
+			methods_sim[methods_idx[name]] = method.get_nearest_neighbors(paper_id)
 
-		# Get the actual distances and indices of the neighbors
-		distances, indices, methods_dist = self._get_nearest_neighbors(methods_dist, weights, k)
+		# Get the actual similarity and indices of the neighbors
+		similarity, indices, methods_sim = self._get_nearest_neighbors(methods_sim, weights, k)
 
-		return distances, indices, methods_dist, methods_idx
+		return similarity, indices, methods_sim, methods_idx
 
-	def _get_nearest_neighbors(self, methods_dist, weights, k):
+	def _get_nearest_neighbors(self, methods_sim, weights, k):
 		"""
 		Internal computations of nearest neighbors shared by online and offline functions
 		"""
 
-		# Get the distances for each weight vector
-		distances = np.dot(weights, methods_dist)
+		# Get the similarity for each weight vector
+		similarity = weights.dot(methods_sim)
 
 		# Sort the first k nearest neighbors
-		indices_sorted = np.argpartition(distances, k, axis=1)[:,:k]
+		indices_sorted = np.argpartition(-similarity, k, axis=1)[:,:k]
 
 		# Save each weight vector result separately
-		methods_dist = dict(zip(self.methods.keys(), distances))
+		methods_sim = dict(zip(self.methods.keys(), similarity))
 
-		# Get union of indices for all weight vectors	
-		indices_set = set()
-		for row in indices_sorted:
-			indices_set.update(row)
+		# Get union of indices for all weight vectors
+		n_methods,_ = indices_sorted.shape
+		indices_set = set(indices_sorted.reshape([1,n_methods*k])[0])
 		indices = np.array(list(indices_set))
 
-		# Get minimum distance for each of these weight vectors
-		distances = distances[:,indices]
-		distances = distances.mean(axis=0)
+		# Get mean similarity for each of these weight vectors
+		similarity = similarity[:,indices]
+		similarity = similarity.mean(axis=0)
 
-		# Rescale distances for a better display
-		distances /= distances.sum()
-		distances *= 2
+		# Rescale similarity for a better display
+		similarity /= similarity.sum()
+		similarity *= 2
 
 		# Sort the final recommendations
-		indices_sorted = np.argsort(distances)
+		indices_sorted = np.argsort(similarity)
 		indices = indices[indices_sorted]
-		distances = distances[indices_sorted]
+		similarity = similarity[indices_sorted]
 
-		# distances[distances < 0.1] = 0.1
-
-		return distances, indices, methods_dist
+		return similarity, indices, methods_sim
 
 	def get_nearest_neighbors_online(self, paper_id, k):
 		n_methods = len(self.methods)
@@ -252,14 +249,14 @@ class ArXivRecommender():
 			[0.0, 1.0],
 			[0.5, 0.5]])
 
-		# Get neighbors and distances for all methods
+		# Get neighbors and similarity for all methods
 		for name,method in self.methods.iteritems():
 			methods_dist[methods_idx[name]] = method.get_nearest_neighbors_online(paper_id)
 
-		# Get the actual distances and indices of the neighbors
-		distances, indices, methods_dist = self._get_nearest_neighbors(methods_dist, weights, k)
+		# Get the actual similarity and indices of the neighbors
+		similarity, indices, methods_dist = self._get_nearest_neighbors(methods_dist, weights, k)
 
-		return distances, indices, methods_dist, methods_idx
+		return similarity, indices, methods_dist, methods_idx
 
 
 	# ====================================================================================================

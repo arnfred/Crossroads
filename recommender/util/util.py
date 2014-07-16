@@ -89,7 +89,7 @@ def sparse_tile(A, reps):
 	shape = (reps[0]*A.shape[0], reps[1]*A.shape[1])
 	return sparse.csr_matrix((data,(row,col)), shape=shape)
 
-def sparse_sort(m, axis=1, reverse=False):
+def sparse_sort(m, axis=1, reverse=True):
 	"""
 	Sort a sparse matrix along rows or columns
 
@@ -107,28 +107,39 @@ def sparse_sort(m, axis=1, reverse=False):
 	m_argsorted : CSR sparse matrix
 		indices of matrix m sorted along axis ``axis``
 	"""
+
+	if m.ndim > 2:
+		raise NotImplementedError("Sparse sort assumes that the matrix is at most 2-dimensional")
+	if axis is not 1:
+		raise NotImplementedError("Only column sort is supported")
+
+
 	if m.__class__ is not sparse.coo.coo_matrix:
 		m = m.tocoo()
 
 	tuples = izip(m.row, m.col, m.data)
-	tuples_sorted = sorted(tuples, key=lambda x: (x[0], x[1-axis], x[2]), reverse=True)
+	tuples_sorted = sorted(tuples, key=lambda x: (x[0], x[2]), reverse=True)
 	array = np.array(tuples_sorted)
 
 	rows = array[:,0].astype(np.int)
 	cols = array[:,1].astype(np.int)
 
 	# Get sorted columns corresponding to rows
-	cols_sorted = flatten([range(e) for e in np.bincount(rows)])
+	cols_sorted = np.zeros(cols.shape)
+	for e in np.unique(rows):
+		idx = np.where(rows == e)[0]
+		cols_sorted[idx] = np.arange(0,len(idx))
 
 	# Get everything into a sparse matrix
 	ij = np.vstack((rows,cols_sorted))
+
 	m_sorted = sparse.csr_matrix( (array[:,2], ij), shape=m.shape)
 	m_argsorted = sparse.csr_matrix( (cols, ij), shape=m.shape)
 
-	# Put eveything in ascending order if reverse is False
-	if not reverse:
-		m_sorted = m_sorted[:,::-1]
-		m_argsorted = m_argsorted[:,::-1]
+	if reverse is False:
+		if axis == 1:
+			m_sorted = m_sorted[:,::-1]
+			m_argsorted = m_argsorted[:,::-1]
 
 	return m_sorted, m_argsorted
 

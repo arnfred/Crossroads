@@ -52,36 +52,30 @@ class RecommendationMethodInterface(object):
 			If None, the function returns +inf for all articles not in neighbors_indices
 
 		Returns:
-		distances : array
-			distances of the neighbors
+		similarities : csr sparse matrix
+			similarities of the neighbors
 		indices : array (if k is not None)
 			indices of the neighbors.
-			If k is None, only distances is returned, then the indices are the indices of 
-			the vector distances
+			If k is None, only similarities is returned, then the indices are the indices of 
+			the vector similarities
 		"""
 		try:
 			idx = self.idx[paper_id]
 			if k is None:
 				# Get pre-computed values
-				distances = self.neighbors_distances[idx,:]
+				similarities = self.neighbors_similarities[idx,:]
 				indices   = self.neighbors_indices[idx,:]
 				# Reshape it
-				distances = scsp.csr_matrix(
+				similarities = scsp.coo_matrix(
 					(
-						distances,
-						(np.zeros(len(distances)),indices)
+						similarities,
+						(np.zeros(len(similarities)),indices)
 					), shape=(1,self.D)).toarray()[0]
-				# Set to 1 for unknown articles (i.e. maximum possible value)
-				mask = np.ones(distances.shape[0], dtype=np.bool)
-				mask[[indices]] = False
-				distances[mask] = 1
-				# re-set to zero the distance of the paper with itself
-				distances[idx] = 0
-				return distances
+				return similarities
 			else:
-				distances = self.neighbors_distances[idx,:k]
+				similarities = self.neighbors_similarities[idx,:k]
 				indices   = self.neighbors_indices[idx,:k]
-				return distances, indices
+				return similarities, indices
 		except KeyError:
 			print "Unknown paper id: %s" % paper_id
 		except AttributeError:
@@ -322,34 +316,41 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 			probability distributions
 		"""
 
-		assert metric in sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS.keys() or metric is 'total-variation', \
-			"Invalid distance metric: choose between [%s, total-variation]" % ', '.join(sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS.keys())
+		assert metric in ['total-variation', 'l1'], \
+			"Invalid distance metric: choose between ['total-variation', 'l1']]"
 
 		N = float(self.feature_vectors.shape[0])
 		batch_size = 50
 
 		try:
-			f = self.group.neighbors_distances
+			f = self.group.neighbors_similarities
 			f._f_remove()
 			f = self.group.neighbors_indices
 			f._f_remove()
 		except AttributeError:
 			pass
-		self.h5file.create_carray(self.group, "neighbors_distances", tables.Float64Atom(), shape=(N,k))
+		self.h5file.create_carray(self.group, "neighbors_similarities", tables.Float64Atom(), shape=(N,k))
 		self.h5file.create_carray(self.group, "neighbors_indices", tables.UInt64Atom(), shape=(N,k))
-		self.neighbors_distances = self.group.neighbors_distances
+		self.neighbors_similarities = self.group.neighbors_similarities
 		self.neighbors_indices = self.group.neighbors_indices
 
 		for i in np.arange(np.ceil(N/batch_size)):
 			mystdout.write("Query nearest neighbors... %d/%d"%(i*batch_size,N), i*batch_size,N)
 			idx = np.arange(i*batch_size, (i+1)*batch_size)
+			
+			# If total-variation norm, then it is bounded by 1
 			if metric is 'total-variation':
 				dist = 0.5 * sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS['l1'](self.feature_vectors[idx], self.feature_vectors)
+				self.neighbors_indices[idx,:] = np.argsort(dist, axis=1)[:,1:k+1]
+				self.neighbors_similarities[idx,:] = 1 - np.sort(dist, axis=1)[:,1:k+1]
+				self.h5file.flush()
+			
+			# If l-1 norm, then it is bounded by 2
 			else:
 				dist = sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS[metric](self.feature_vectors[idx], self.feature_vectors)
-			self.neighbors_indices[idx,:] = np.argsort(dist, axis=1)[:,1:k+1]
-			self.neighbors_distances[idx,:] = np.sort(dist, axis=1)[:,1:k+1]
-			self.h5file.flush()
+				self.neighbors_indices[idx,:] = np.argsort(dist, axis=1)[:,1:k+1]
+				self.neighbors_similarities[idx,:] = 2 - np.sort(dist, axis=1)[:,1:k+1]
+				self.h5file.flush()
 
 		mystdout.write("Query nearest neighbors done.", i*batch_size,N, ln=1)
 
@@ -413,14 +414,40 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 
 		return distances, indices
 
-	def get_nearest_neighbors_online(self, paper_id, metric='total-variation'):
+	def get_nearest_neighbors_online(self, paper_id, metric='total-variation', kind='similarity'):
+		"""
+		Compute the k nearest neighbors for a given paper_id with online computations
+
+		Arguments:
+		paper_id : str
+			id of the paper
+		metric : str
+			metric to choose nearest neighbors
+		kind : str
+			'distance' or 'similarity'
+		"""
+		assert kind in ['similarity', 'distance'], "Argument ``kind`` must be 'distance' or 'similarity'"
+
 		if metric == 'total-variation':
 			dist = 0.5 * np.array(abs(util.sparse_tile(self.feature_vectors[self.idx[paper_id]], (self.D,1)) - self.feature_vectors[:]).sum(axis=1).T)[0]
+			if kind is 'distance':
+				return dist
+			else:
+				return 1-dist
 		elif metric in sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS.keys():
 			dist = sklearn.metrics.pairwise.PAIRWISE_DISTANCE_FUNCTIONS[metric](self.feature_vectors[self.idx[paper_id]], self.feature_vectors[:])[0]
+			if metric in ['l1','manhattan']:
+				if kind is 'distance':
+					return dist
+				else:
+					return 2-dist
+			else:
+				if kind is 'distance':
+					return dist
+				else:
+					raise Exception("Argument ``kind`` cannot be 'similarity' with metric %s" % metric)
 		else:
 			raise Exception("Invalid metric")
-		return dist
 
 	# ====================================================================================================
 
@@ -512,40 +539,36 @@ class AuthorBasedRecommendation(RecommendationMethodInterface):
 		batch_size = 100
 
 		try:
-			f = self.group.neighbors_distances
+			f = self.group.neighbors_similarities
 			f._f_remove()
 			f = self.group.neighbors_indices
 			f._f_remove()
 		except AttributeError:
 			pass
-		self.h5file.create_carray(self.group, "neighbors_distances", tables.Float64Atom(), shape=(N,k))
+		self.h5file.create_carray(self.group, "neighbors_similarities", tables.Float64Atom(), shape=(N,k))
 		self.h5file.create_carray(self.group, "neighbors_indices", tables.UInt64Atom(), shape=(N,k))
-		self.neighbors_distances = self.group.neighbors_distances
+		self.neighbors_similarities = self.group.neighbors_similarities
 		self.neighbors_indices = self.group.neighbors_indices
 		
-		sim = self.feature_vectors.dot(self.feature_vectors.T)
+		all_sim = self.feature_vectors.dot(self.feature_vectors.T)
 
 		for i in np.arange(np.ceil(N/batch_size)):
 			mystdout.write("Query nearest neighbors... %d/%d"%(i*batch_size,N), i*batch_size,N)
 			idx = np.arange(i*batch_size, (i+1)*batch_size)
 			
 			# Unsparse the cosine similarity, and convert it to a distance
-			dist = sim[idx,:].toarray()
-			dist = 1 - dist
-			dist[dist < 0] = 0 # For floating point approximations
+			batch_sim = all_sim[idx,:].toarray()
 
-			self.neighbors_indices[idx,:] = np.argsort(dist, axis=1)[:,1:k+1]
-			self.neighbors_distances[idx,:] = np.sort(dist, axis=1)[:,1:k+1]
+			self.neighbors_indices[idx,:] = np.argsort(batch_sim, axis=1)[:,1:k+1]
+			self.neighbors_similarities[idx,:] = np.sort(batch_sim, axis=1)[:,1:k+1]
 			self.h5file.flush()
 
 		mystdout.write("Query nearest neighbors done.", i*batch_size,N, ln=1)
 
 	def get_nearest_neighbors_online(self, paper_id):
 		# Compute cosine similarity
-		dist = self.feature_vectors[self.idx[paper_id]].dot(self.feature_vectors.T)
-		dist = dist.toarray()[0]
-		# Transform into a proper distance metric
-		dist = 1 - dist
-		return dist
+		sim = self.feature_vectors[self.idx[paper_id]].dot(self.feature_vectors.T)
+		sim = sim.toarray()[0]
+		return sim
 
 
