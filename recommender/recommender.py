@@ -230,7 +230,7 @@ class ArXivRecommender():
 
 		# Rescale similarity for a better display
 		similarity /= similarity.sum()
-		similarity *= 2
+		similarity *= 4
 
 		# Sort the final recommendations
 		indices_sorted = np.argsort(similarity)[::-1]

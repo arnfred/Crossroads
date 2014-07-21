@@ -113,11 +113,11 @@ body {
     color: #333;
 }
 #info_pane #title {
-    font-size: 18pt;
+    font-size: 12pt;
     font-weight: 900;
 }
 #info_pane #authors {
-    font-size: normal;
+    font-size: 10pt;
     font-weight: 200;
     color: #333;
 }
@@ -178,6 +178,9 @@ body {
 -------------------------------------------------- */
 .node {
   stroke-width: 2.5px;
+}
+.node:hover {
+  color: black;
 }
 .link {
   fill: none;
