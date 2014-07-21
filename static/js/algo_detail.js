@@ -30,9 +30,10 @@ define(["ractive", "js/barplot",
 	////////////////////////////////////////
 
 	view.display = function(n) {
+		document.getElementById('algo_detail').style.display = 'block';
 		view.set("hide", false);
 	    view.set("neighbors_list", n);
-	    barplot();
+	    barplot(n);
 	}
 
 	////////////////////////////////////////

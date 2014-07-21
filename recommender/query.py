@@ -20,34 +20,29 @@ def center(recommender, paper_id, k) :
 	if paper_id != "":
 		global graph	
 		graph = myGraph(recommender.get_data)
-		distances, indices, methods_dist, methods_idx = graph_creation(recommender, paper_id, k)
+		similarity, indices, methods_sim, methods_idx = graph_creation(recommender, paper_id, k)
 	graph_dict = graph.to_dict()
 
-	main_node_data = {'final_recommendation':[], 'LDABasedRecommendation':[], 'AuthorBasedRecommendation':[]}
-	for rank,(idx,dist) in enumerate(zip(indices[1:k],distances[1:k])):
+	neighbors_data = {
+		'LDABasedRecommendation': {'key':'Topic similarity', 'values':[]},
+		'AuthorBasedRecommendation': {'key':'Author similarity', 'values':[]}
+	}
+
+	for rank,(idx,dist) in enumerate(zip(indices[1:],similarity[1:])):
 		doc_id = recommender.ids[idx]
-		element = {}
-		element['rank'] = rank+1
-		element['total_distance'] = "%.4f"%(1-abs(dist))
-		element['id'] = doc_id
-		element['topics_distance'] = "%.4f"%(1-methods_dist['LDABasedRecommendation'][idx])
-		element['authors_distance'] = "%.4f"%(1-methods_dist['AuthorBasedRecommendation'][idx])
-		main_node_data['final_recommendation'].append(element)
+		e1 = {}
+		e1['x'] = rank
+		e1['xlabel'] = doc_id
+		e1['y'] = methods_sim['LDABasedRecommendation'][idx]
+		neighbors_data['LDABasedRecommendation']['values'].append(e1)
 
-	for name,idx in methods_idx.iteritems():
-		indices_sorted = np.argsort(methods_dist[name])[1:k]
-		distances_sorted = np.sort(methods_dist[name])[1:k]
-		for rank,(idx,dist) in enumerate(zip(indices_sorted,distances_sorted)):
-			doc_id = recommender.ids[idx]
-			element = {}
-			element['rank'] = rank+1
-			element['total_distance'] = "%.4f"%(1-abs(dist))
-			element['id'] = doc_id
-			element['topics_distance'] = "%.4f"%(1-methods_dist['LDABasedRecommendation'][idx])
-			element['authors_distance'] = "%.4f"%(1-methods_dist['AuthorBasedRecommendation'][idx])
-			main_node_data[name].append(element)
+		e2 = {}
+		e2['x'] = rank
+		e2['xlabel'] = doc_id
+		e2['y'] = methods_sim['AuthorBasedRecommendation'][idx]
+		neighbors_data['AuthorBasedRecommendation']['values'].append(e2)
 
-	return json.dumps({'graph_data':graph_dict, 'main_node_data':main_node_data})
+	return json.dumps({'graph_data':graph_dict, 'neighbors_data':neighbors_data.values()})
 
 
 def graph_creation(recommender, paper_id, k):
@@ -65,12 +60,12 @@ def graph_creation(recommender, paper_id, k):
 		parent_id, level = to_visit.pop()
 		new_level = level+1
 
-		distances, indices, methods_dist, methods_idx = recommender.get_nearest_neighbors(parent_id, k)
+		distances, indices, methods_sim, methods_idx = recommender.get_nearest_neighbors(parent_id, k)
 		visited.add(parent_id)
 
 		# Keep track of the neighbors of the root node
 		if parent_id is paper_id:
-			center_node_data = distances, indices, methods_dist, methods_idx
+			center_node_data = distances, indices, methods_sim, methods_idx
 
 		for dist, idx in zip(distances, indices):
 			child_id = recommender.ids[idx]

@@ -2,12 +2,12 @@
 {{ ^hide }}    
 <div class="row">
   <h2 class="text-center top-space">How it works</h2>
-  <h5 class="text-center">The recommendation is based on two different similarity measures between articles</h5>
+  <h5 class="text-center">The recommendation is based on two different similarity measures between articles.</h5>
 </div><!-- /row -->
 
 <div class="row">
   <div class="col-md-offset-2 col-sm-3">
-    <h3>The topic distance</h3>
+    <h3>The topic similarity</h3>
     <p class="text-justify">Based on the content of the abstract, we extract the topics of the articles (i.e. what subject is it talking about). Articles sharing similar proportions of topics are assumed to be similar.</p>
   </div>
   <div class="col-md-offset-2 col-sm-3">
@@ -19,138 +19,12 @@
 <div class="row">
   <div class="col-md-offset-1 col-md-10">
     <h3>How the final metric is done</h3>
-    <p>The final recommendation takes each of these metrics independently and a uniform linear combination between them, and retrieve the union of the top-k neigbhors. The detail of the recommendation for the neigbhors of the current paper is shown below.</p>
-  </div>
-</div><!-- /row -->
-
-<div class="row">
-  <div class="col-md-offset-1 col-md-10"> 
-    <table class="table text-center">
-      <tr>
-        <td>Rank</td>
-        {{ #neighbors_list.final_recommendation }}
-          <td>{{ rank }}</td>
-        {{ /neighbors_list.final_recommendation }}
-      </tr>
-      <tr>
-        <td>Paper id</td>
-         {{ #neighbors_list.final_recommendation }}
-          <td>{{ id }}</td>
-        {{ /neighbors_list.final_recommendation }}
-      </tr>
-      <tr>
-        <td class="vert-align-top">Distance</td>
-        {{ #neighbors_list.final_recommendation }}
-        <td class="vert-align-top">
-          <div class="col-centered right-padding" style='background-color: red; width: 80px; height: {{ topics_distance * 100 }}px;'></div>
-          <div class="col-centered right-padding" style='background-color: blue; width: 80px; height: {{ authors_distance * 100 }}px;'></div>
-        </td>
-        {{ /neighbors_list.final_recommendation }}
-      </tr>
-    </table>
-  </div>
-  <div class="col-md-1">
-    <table>
-      <caption>Legend:</caption>
-      <tr>
-        <td><div class="right-padding" style='background-color: red; width: 15px;height: 1em;'></div></td>
-        <td>topics distance</td>
-      </tr>
-      <tr>
-        <td>
-          <div class="right-padding" style='background-color: blue; width: 15px;height: 1em;'></div></td>
-        <td>authors distance</td>
-      </tr>
-    </table>
-  </div>
-</div><!-- /row -->
-
-<div class="row">
-  <div class="col-md-offset-1 col-md-10">
-    <p>Taking only the topics into account, the nearest neighbors are:</p>
-  </div>
-</div><!-- /row -->
-
-<div class="row">
-  <div class="col-md-offset-1 col-md-10"> 
-    <table class="table text-center">
-      <tr>
-        <td>Rank</td>
-        {{ #neighbors_list.LDABasedRecommendation }}
-        <td>{{ rank }}</td>
-        {{ /neighbors_list.LDABasedRecommendation }}
-      </tr>
-      <tr>
-        <td>Paper id</td>
-        {{ #neighbors_list.LDABasedRecommendation }}
-        <td>{{ id }}</td>
-        {{ /neighbors_list.LDABasedRecommendation }}
-      </tr>
-      <tr>
-        <td class="vert-align-top">Distance</td>
-        {{ #neighbors_list.LDABasedRecommendation }}
-        <td class="vert-align-top">
-          <div class="col-centered right-padding" style='background-color: red; width: 80px; height: {{ topics_distance * 100 }}px;'></div>
-        </td>
-        {{ /neighbors_list.LDABasedRecommendation }}
-      </tr>
-    </table>
-  </div>
-  <div class="col-md-1">
-    <table>
-      <caption>Legend:</caption>
-      <tr>
-        <td><div class="right-padding" style='background-color: red; width: 15px;height: 1em;'></div></td>
-        <td>topics distance</td>
-      </tr>
-    </table>
-  </div>
-</div><!-- /row -->
-
-<div class="row">
-  <div class="col-md-offset-1 col-md-10">
-    <p>Taking only the authors into account, the nearest neighbors are:</p>
-  </div>
-</div><!-- /row -->
-
-<div class="row">
-  <div class="col-md-offset-1 col-md-10"> 
-    <table class="table text-center">
-      <tr>
-        <td>Rank</td>
-        {{ #neighbors_list.AuthorBasedRecommendation }}
-        <td>{{ rank }}</td>
-        {{ /neighbors_list.AuthorBasedRecommendation }}
-      </tr>
-      <tr>
-        <td>Paper id</td>
-        {{ #neighbors_list.AuthorBasedRecommendation }}
-        <td>{{ id }}</td>
-        {{ /neighbors_list.AuthorBasedRecommendation }}
-      </tr>
-      <tr>
-        <td class="vert-align-top">Distance</td>
-        {{ #neighbors_list.AuthorBasedRecommendation }}
-        <td class="vert-align-top">
-          <div class="col-centered right-padding" style='background-color: blue; width: 80px; height: {{ authors_distance * 100 }}px;'></div>
-        </td>
-        {{ /neighbors_list.AuthorBasedRecommendation }}
-      </tr>
-    </table>
-  </div>
-  <div class="col-md-1">
-    <table>
-      <caption>Legend:</caption>
-      <tr>
-        <td><div class="right-padding" style='background-color: blue; width: 15px;height: 1em;'></div></td>
-        <td>authors distance</td>
-      </tr>
-    </table>
+    <p>The final recommendation takes each of these metrics independently and a uniform linear combination between them, and retrieve the union of the top-10 neigbhors. The detail of the recommendation for the neigbhors of the current paper is shown below.</p>
   </div>
 </div><!-- /row -->
 
 <div class="row" id="bar-chart">
-  <div class="col-md-10" id="chart1">
+  <div class="col-md-offset-1 col-md-10" id="chart1">
     <svg></svg>
   </div>
 </div>

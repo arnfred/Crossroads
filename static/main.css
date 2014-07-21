@@ -6,7 +6,7 @@ body {
   color: #222;
   font-family: 'Signika';
   padding-top: 65px; 
-  padding-bottom: 40px;
+  padding-bottom: 60px;
 }
 
 
@@ -126,6 +126,8 @@ body {
     font-size: normal;
     text-align: justify;
     overflow-y: auto;
+    font-family: 'Helvetica';
+    font-size: 10pt;
 }
 
 
@@ -143,9 +145,11 @@ body {
 -------------------------------------------------- */
 
 #algo_detail {
+  display: none;
   background-color: #f3f3f3;
   padding-right: 0;
   padding-left: 0;
+  padding-bottom: 60px;
 }
 
 #algo_detail p, h5 {
@@ -160,6 +164,14 @@ body {
 }
 #algo_detail .vert-align-top {
     vertical-align: top;
+}
+
+#chart1 svg {
+  height: 500px;
+}
+
+#chart1 {
+  position: relative;
 }
 
 /* Graph SVG CSS

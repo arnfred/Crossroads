@@ -233,7 +233,7 @@ class ArXivRecommender():
 		similarity *= 2
 
 		# Sort the final recommendations
-		indices_sorted = np.argsort(similarity)
+		indices_sorted = np.argsort(similarity)[::-1]
 		indices = indices[indices_sorted]
 		similarity = similarity[indices_sorted]
 
@@ -242,7 +242,7 @@ class ArXivRecommender():
 	def get_nearest_neighbors_online(self, paper_id, k):
 		n_methods = len(self.methods)
 		methods_idx = dict(zip(self.methods.keys(),range(n_methods)))
-		methods_dist = np.zeros([n_methods, self.D])
+		methods_sim = np.zeros([n_methods, self.D])
 
 		weights = np.array([
 			[1.0, 0.0],
@@ -251,12 +251,12 @@ class ArXivRecommender():
 
 		# Get neighbors and similarity for all methods
 		for name,method in self.methods.iteritems():
-			methods_dist[methods_idx[name]] = method.get_nearest_neighbors_online(paper_id)
+			methods_sim[methods_idx[name]] = method.get_nearest_neighbors_online(paper_id)
 
 		# Get the actual similarity and indices of the neighbors
-		similarity, indices, methods_dist = self._get_nearest_neighbors(methods_dist, weights, k)
+		similarity, indices, methods_sim = self._get_nearest_neighbors(methods_sim, weights, k)
 
-		return similarity, indices, methods_dist, methods_idx
+		return similarity, indices, methods_sim, methods_idx
 
 
 	# ====================================================================================================

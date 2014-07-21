@@ -38,8 +38,9 @@ define([
 
 		// Load data and start force layout
 		d3.json("/d/" + paper_id + "-" + 10 + "/", function(error, neighbors_data) {
+
 			graph_data = neighbors_data.graph_data
-			main_node_data = neighbors_data.main_node_data
+			neighbors_data = neighbors_data.neighbors_data
 
 			// Mapping between paper ids and array ids
 			graph_idx = _.map(graph_data.nodes, function(n){return n.id});
@@ -53,7 +54,7 @@ define([
 			pane.display(focused_node);
 
 			// Initialize the description of the algorithm results
-			algo_detail.display(main_node_data)
+			algo_detail.display(neighbors_data)
 
 			var tmp_nodes = [],
 				tmp_links = [];
