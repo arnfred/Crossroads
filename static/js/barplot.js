@@ -10,7 +10,7 @@ define(["lib/d3.v3.min", "lib/nvd3/nv.d3.min"], function(d3) {
 			  .rotateLabels(-30)      //Angle to rotate x-axis labels.
 			  .groupSpacing(0.1)    //Distance between each group of bars.
 			  .margin({top: 30, right: 20, bottom: 50, left: 175})
-        	  .tooltips(true)             //Show tooltips on hover
+        	  //.tooltips(true)             //Show tooltips on hover
 			;
 
 			chart.xAxis
