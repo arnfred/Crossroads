@@ -1,8 +1,11 @@
 <!-- hide the header until the page is displayed -->
 {{ ^hide }}    
 <div class="row">
-  <h2 class="text-center top-space">How it works</h2>
-  <h5 class="text-center">The recommendation is based on two different similarity measures between articles.</h5>
+  <div class="col-md-offset-3 col-md-6">
+      <h2 class="text-center top-space">How it works</h2>
+      <p>The recommendation is based on two different similarity measures between articles: the <b>topic similarity</b> and the <b>authors collaborations similarity</b>.</p>
+      <p> The final recommendation takes these metrics independently and a uniform linear combination between them, and retrieve the <b>union</b> of the <b>top-10 neigbhors</b>.</p>
+  </div>
 </div><!-- /row -->
 
 <div class="row">
@@ -11,20 +14,19 @@
     <p class="text-justify">Based on the content of the abstract, we extract the topics of the articles (i.e. what subject is it talking about). Articles sharing similar proportions of topics are assumed to be similar.</p>
   </div>
   <div class="col-md-offset-2 col-sm-3">
-    <h3>The authors collaborations distance</h3>
+    <h3>The authors collaborations similarity</h3>
     <p class="text-justify">The more authors articles share, the more similar they are.</p>
   </div>
 </div> <!-- /row -->
 
 <div class="row">
-  <div class="col-md-offset-1 col-md-10">
-    <h3>How the final metric is done</h3>
-    <p>The final recommendation takes each of these metrics independently and a uniform linear combination between them, and retrieve the union of the top-10 neigbhors. The detail of the recommendation for the neigbhors of the current paper is shown below.</p>
+  <div class="col-md-offset-2 col-md-8">
+    <h3>The details of the similarities for the current neighbors is shown here:</h3>
   </div>
 </div><!-- /row -->
 
 <div class="row" id="bar-chart">
-  <div class="col-md-offset-1 col-md-10" id="chart1">
+  <div class="col-md-offset-2 col-md-8" id="chart1">
     <svg></svg>
   </div>
 </div>

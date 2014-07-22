@@ -73,9 +73,11 @@ $def with(paper_id)
             ractive_fade : "/static/lib/ractive-transitions-fade.min"
             }
         },
-        ["js/search", "js/graph", "domReady!"],
-        function(search, graph) {
+        ["js/search", "js/graph", "js/barplot", "js/info_pane", "domReady!"],
+        function(search, graph, barplot, info_pane) {
             search.set_graph(graph);
+            barplot.set_graph(graph);
+            info_pane.set_graph(graph);
         });
       </script>
 

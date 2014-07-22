@@ -119,15 +119,19 @@ define([
 					return d.source.id + "-" + d.target.id;
 				});
 
+			// Node selected to show info panel
+			var selected_node = undefined;
+			var selected_node_color = "A30000";
+
 			link.enter().append("line")
 				.attr("class", "link");
 			link.exit().remove();
 
 			node.enter().append("circle")
 				.attr("class", "node")
-				.on("mouseover", _.debounce(function(n) {
+				.on("click", function(n) {
 					pane.display(n);
-				}, 150))
+				})
 				.on("dblclick", function(n) {
 					graph.update(n.id);
 				})

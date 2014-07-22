@@ -6,15 +6,17 @@ define(["ractive", "lib/underscore", "text!templates/info_pane.html"], function(
 	//                                    //
 	////////////////////////////////////////
 
-	var view = new R({
+	info_pane = {}
+
+	info_pane.view = new R({
 		template : pane_template,
 		el : "info_pane",
 		data : {
-            id : undefined,
+			id : undefined,
 			title : undefined,
 			abstract : undefined,
-            paper : undefined,
-            authors : undefined
+			paper : undefined,
+			authors : undefined
 		}
 	});
 
@@ -24,6 +26,15 @@ define(["ractive", "lib/underscore", "text!templates/info_pane.html"], function(
 	//                                    //
 	////////////////////////////////////////
 
+	info_pane.events = function() {
+		
+		// When button is pressed
+		info_pane.view.on("submit-click", function(e) {
+			console.log(info_pane.view.data.id);
+			info_pane.graph.update(info_pane.view.data.id);
+		});
+
+	}
 
 	////////////////////////////////////////
 	//                                    //
@@ -31,12 +42,16 @@ define(["ractive", "lib/underscore", "text!templates/info_pane.html"], function(
 	//                                    //
 	////////////////////////////////////////
 
-	view.display = function(node) {
-	    view.set("id", node.id);
-	    view.set("title", node.title);
-	    view.set("abstract", node.abstract);
-	    view.set("authors", node.authors)
-	    view.set("paper", true);
+	info_pane.set_graph = function(graph) {
+		info_pane.graph = graph;
+	}
+
+	info_pane.display = function(node) {
+	    info_pane.view.set("id", node.id);
+	    info_pane.view.set("title", node.title);
+	    info_pane.view.set("abstract", node.abstract);
+	    info_pane.view.set("authors", node.authors)
+	    info_pane.view.set("paper", true);
 	}
 
 	////////////////////////////////////////
@@ -46,5 +61,5 @@ define(["ractive", "lib/underscore", "text!templates/info_pane.html"], function(
 	////////////////////////////////////////
 
 	//view.events();
-	return view;
+	return info_pane;
 });

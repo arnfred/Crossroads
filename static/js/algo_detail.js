@@ -33,7 +33,7 @@ define(["ractive", "js/barplot",
 		document.getElementById('algo_detail').style.display = 'block';
 		view.set("hide", false);
 	    view.set("neighbors_list", n);
-	    barplot(n);
+	    barplot.update(n);
 	}
 
 	////////////////////////////////////////

@@ -152,7 +152,7 @@ body {
   padding-bottom: 60px;
 }
 
-#algo_detail p, h5 {
+#algo_detail p, h5, h4 {
   font-family:"Open sans", Helvetica, Arial;
 }
 #algo_detail .right-padding {
@@ -167,11 +167,12 @@ body {
 }
 
 #chart1 svg {
-  height: 500px;
+  height: 300px;
 }
 
 #chart1 {
-  position: relative;
+  position: inherit;
+
 }
 
 /* Graph SVG CSS
@@ -179,9 +180,11 @@ body {
 .node {
   stroke-width: 2.5px;
 }
-.node:hover {
-  color: black;
+
+.circle:hover {
+  opacity: 0.5;
 }
+
 .link {
   fill: none;
   stroke: #9ecae1;
