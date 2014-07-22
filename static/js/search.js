@@ -89,7 +89,7 @@ define(["lib/d3.v3.min", "lib/jquery", "ractive", "text!templates/search.html"],
 
 	// Set graph
 	search.set_graph = function(graph) {
-	search.graph = graph;
+		search.graph = graph;
 	}
 
 

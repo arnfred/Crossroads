@@ -178,7 +178,8 @@ body {
 /* Graph SVG CSS
 -------------------------------------------------- */
 .node {
-  stroke-width: 2.5px;
+  stroke-width: 0px;
+  stroke: black;
 }
 
 .circle:hover {

@@ -19,7 +19,7 @@ define([
 		links = [];
 
 	var colors = function(e) {
-		i = colorbrewer['YlGnBu'][3];
+		i = colorbrewer['YlGnBu'][4];
 		return i[e]
 	};
 
@@ -32,6 +32,14 @@ define([
 
 	// Add data to graph
 	graph.update = function(paper_id) {
+
+		// Node selected to show info panel (init root node as selected node)
+		var selected_node_id = paper_id;
+		var selected_node_level = 0;
+		var selected_node = undefined;
+		var selected_circle = undefined;
+		var selected_circle_color = d3.rgb(colors(0));
+		var selected_node_stroke_width = "3";
 
 		svg.attr("width", width)
 			.attr("height", height);
@@ -119,10 +127,6 @@ define([
 					return d.source.id + "-" + d.target.id;
 				});
 
-			// Node selected to show info panel
-			var selected_node = undefined;
-			var selected_node_color = "A30000";
-
 			link.enter().append("line")
 				.attr("class", "link");
 			link.exit().remove();
@@ -131,15 +135,35 @@ define([
 				.attr("class", "node")
 				.on("click", function(n) {
 					pane.display(n);
-				})
-				.on("dblclick", function(n) {
-					graph.update(n.id);
+					if (selected_node != undefined) {
+						d3.select(selected_node).style("fill", d3.rgb(colors(selected_node_level+1)));
+						d3.select(selected_node).style("stroke-width", "0");
+					}
+					selected_node = this;
+					selected_node_level = n.level;
+					d3.select(selected_node).style("fill", selected_circle_color);
+					d3.select(selected_node).style("stroke-width", selected_node_stroke_width);
 				})
 				.attr("r", function(n) {
 					return 15 - 2.5*n.level*n.level;
 				})
 				.attr("fill", function(n) {
-						return  d3.rgb(colors(n.level));
+					if (n.level == 0) {
+						// set the selected_node as this node (Kind of hacky way to do it, TO FIX)
+						selected_node = this;
+						return selected_circle_color;
+					} else {
+						return  d3.rgb(colors(n.level+1));
+					}
+				}).
+				attr("stroke-width", function(n) {
+
+					if (n.level == 0) {
+						console.log(selected_node)
+						return selected_node_stroke_width;
+					} else {
+						return  "0";
+					}
 				})
 				.call(force.drag);
 			node.exit().remove();
