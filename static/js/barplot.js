@@ -10,7 +10,8 @@ define(["lib/d3.v3.min", "lib/nvd3/nv.d3.min"], function(d3) {
 
 		nv.addGraph(function() {
 			var chart = nv.models.multiBarChart()
-			  .showControls(true)
+			  .stacked(true)
+			  .showControls(false)
 			  .reduceXTicks(false)   //If 'false', every single x-axis tick label will be rendered.
 			  .rotateLabels(-30)      //Angle to rotate x-axis labels.
 			  .groupSpacing(0.1)    //Distance between each group of bars.
