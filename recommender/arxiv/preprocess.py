@@ -1,6 +1,6 @@
 
 """
-Preprocess articles crawled from arXiv API for LDA
+Preprocess articles crawled from arXiv API
 """
 
 import re

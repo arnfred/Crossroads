@@ -16,7 +16,7 @@ from .exceptions import UnknownIDException, UnknownAuthorException
 
 END_DATE = '3000-01-01 00:00:00.000000'
 START_DATE = '0001-01-01 00:00:00.000000'
-CATEGORIES = set(['math', 'cs', 'q-bio'])
+CATEGORIES = set(['math', 'cs', 'q-bio']) # See http://arxiv.org/help/api/user-manual for more information on arXiv categories
 
 class ArXivRecommender():
 	"""
@@ -187,6 +187,15 @@ class ArXivRecommender():
 	# ====================================================================================================
 
 	def get_nearest_neighbors(self, paper_id, k):
+		"""
+		Get the k nearest neighbors of an article (use precomputed data from the hdf5 file)
+
+		Arguments:
+		paper_id : str
+			arXiv id of the article
+		k : int
+			number of nearest neighbors to retrieve
+		"""
 		n_methods = len(self.methods)
 		methods_idx = dict(zip(self.methods.keys(),range(n_methods)))
 		methods_sim = np.zeros((n_methods, self.D), dtype=np.float)
@@ -240,6 +249,9 @@ class ArXivRecommender():
 		return similarity, indices, methods_sim
 
 	def get_nearest_neighbors_online(self, paper_id, k):
+		"""
+		Get the k nearest neighbors of an articles with online computations
+		"""
 		n_methods = len(self.methods)
 		methods_idx = dict(zip(self.methods.keys(),range(n_methods)))
 		methods_sim = np.zeros([n_methods, self.D])
@@ -285,11 +297,15 @@ class ArXivRecommender():
 			raise UnknownIDException(paper_id)
 
 	def get_papers_from_author(self, author):
+		"""
+		Get all the paper ids of articles from a given author
+		"""
 		self.open_db_connection()
 		formatted_author = "%{0}%".format(author)
 		ids = self.cursor.execute("SELECT id FROM Articles WHERE authors LIKE ?", (formatted_author,)).fetchall()
 		if len(ids) == 0:
 			raise UnknownAuthorException(author)
+		return ids
 
 	# ====================================================================================================
 
