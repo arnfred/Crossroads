@@ -16,7 +16,7 @@ from .exceptions import UnknownIDException, UnknownAuthorException
 
 END_DATE = '3000-01-01 00:00:00.000000'
 START_DATE = '0001-01-01 00:00:00.000000'
-CATEGORIES = set(['math', 'cs', 'q-bio']) # See http://arxiv.org/help/api/user-manual for more information on arXiv categories
+CATEGORIES = set(['cs', 'math', 'q-bio', 'stat']) # See http://arxiv.org/help/api/user-manual for more information on arXiv categories
 
 class ArXivRecommender():
 	"""
@@ -33,7 +33,7 @@ class ArXivRecommender():
 			Location of the db file
 		mode : 'r','a','w'
 			Opening mode of hdf5 file
-			WARNING: if ``mode`` is 'w', arrays gets overwritten at initialization
+			WARNING: if ``mode`` is 'w', HDF5 file gets overwritten at initialization
 		start_date : string
 			Starting date of the papers to process
 		end_date : string
@@ -148,7 +148,8 @@ class ArXivRecommender():
 		"""
 		Initialize the recommendation methods
 		"""
-		# Create/overwrite main group
+		# Create/overwrite recommendation_methods group
+		# (erase everything if it already exists)
 		try:
 			g = getattr(self.h5file.root, 'recommendation_methods')
 			g._g_remove('recursive')
@@ -161,6 +162,7 @@ class ArXivRecommender():
 	def load_recommendation_methods(self):
 		self.methods = dict()	# Dict of recommendation methods
 		# Iterate over the recommendation_methods group to get all recommendation methods
+		# (The recommendations methods corresponding to all these groups will be loaded)
 		group = self.h5file.root.recommendation_methods
 		for i,n in enumerate(self.h5file.list_nodes(group)):
 			assert type(n) is tables.group.Group, "group /recommendation_methods should only contain groups"

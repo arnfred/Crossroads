@@ -23,8 +23,10 @@ class RecommendationMethodInterface(object):
 		self.db_path = db_path
 		self.h5file = h5file
 		try:
+			# Initialize the hdf5 file group for this recommendation methods
 			self.group = getattr(self.h5file.root.recommendation_methods, self.__class__.__name__)
 		except AttributeError:
+			# Create it if it does not exist
 			self.group = self.h5file.create_group("/recommendation_methods", self.__class__.__name__, self.__class__.__name__)
 		self.load_miscellaneous()
 
@@ -59,6 +61,11 @@ class RecommendationMethodInterface(object):
 			If k is None, only similarities is returned, then the indices are the indices of 
 			the vector similarities
 		"""
+		# Get the pre-computed indices and similarities of the top nearest neighbors stored
+		# in the HDF5 file and reconstruct the vector of similarities for all documents.
+		# Artcicles that are not present in the HDF5 file are assumed to have 0 similarity
+		# with the current article. (They were actually very small and were threshold to 
+		# zero to gain space and speed)
 		try:
 			idx = self.idx[paper_id]
 			if k is None:
@@ -119,7 +126,8 @@ class RecommendationMethodInterface(object):
 
 	def load_all(self):
 		"""
-		Syntaxic sugar for everything we need
+		Syntaxic sugar for every array in the group.
+		It creates a short to write ``self.attr'' instead of ``self.h5file.root.attr''
 		"""
 		for node in self.h5file.list_nodes(self.group):
 			if type(node) is tables.group.Group:
@@ -302,7 +310,7 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 
 	# ====================================================================================================
 
-	def build_nearest_neighbors(self, metric='euclidean', k=50):
+	def build_nearest_neighbors(self, metric='total-variation', k=50):
 		"""
 		Build the matrix of nearest neighbors for every paper
 
@@ -359,11 +367,13 @@ class LDABasedRecommendation(RecommendationMethodInterface):
 	def get_nearest_neighbors_online_2level(self, paper_id, k, percentile=1.0):
 		"""
 		Get the k nearest neighbors for a given paper_id by computing them online
-		based on some metric
+		based on some metric working in 2 levels: it first compute the Jaccard index
+		to take as neighbors only the papers sharing the exact same top-k topics, and then
+		class them using the euclidean distance
 		"""
 
 		print "WARNING: get_nearest_neighbors_online_2level function of LDABasedRecommendation " + \
-				"is deprecated and might not worked as planned !"
+				"is deprecated and might not work !"
 
 		M = self.feature_vectors.shape[0]
 		try:
@@ -531,7 +541,7 @@ class AuthorBasedRecommendation(RecommendationMethodInterface):
 		except AttributeError:
 			pass
 		self.h5file.create_group(self.group, 'feature_vectors', 'Feature vectors sparse matrix')
-		util.store_sparse_mat(self.feature_vectors, 'feature_vectors', self.h5file, self.group.feature_vectors)		
+		util.store_sparse_mat(self.feature_vectors, 'feature_vectors', self.h5file, self.group.feature_vectors)
 		self.h5file.flush()
 		
 	def build_nearest_neighbors(self, k=100):
