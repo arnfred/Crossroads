@@ -93,7 +93,6 @@ class myGraph(nx.DiGraph) :
 		if a node id already exist, then do not modify it but add an edge to the new parent
 		"""
 		# Get article data
-		print "graph.add -> %s"%node_id
 		data = self.get_data(node_id)
 		
 		# Add node to the graph
