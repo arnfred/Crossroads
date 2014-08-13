@@ -48,40 +48,36 @@ def center(recommender, paper_id, k) :
 
 
 def graph_creation(recommender, paper_id, k):
-	
-	level = 0
-	max_level = 2
-	to_visit = [(paper_id, level)]
-	visited = set()
-	parent_id = paper_id # Set the parent of the root node as itslef
 
 	# Init root node
-	graph.add(paper_id, parent_id, level, 0.0)
+	graph.add(paper_id, paper_id, level=0, similarity=0.0)
 
-	while len(to_visit) > 0:
-		parent_id, level = to_visit.pop()
-		new_level = level+1
+	similarity, indices, methods_sim, methods_idx = recommender.get_nearest_neighbors(paper_id, k)
 
-		distances, indices, methods_sim, methods_idx = recommender.get_nearest_neighbors(parent_id, k)
-		visited.add(parent_id)
+	# Keep track of the neighbors data for the root node
+	neighbors_data = similarity, indices, methods_sim, methods_idx
 
-		# Keep track of the neighbors of the root node
-		if parent_id is paper_id:
-			center_node_data = distances, indices, methods_sim, methods_idx
+	# Add first level neighbors
+	for idx,similarity in zip(indices, similarity):
+		child_id = recommender.ids[idx]
+		graph.add(child_id, paper_id, level=1,  similarity=similarity)
 
-		for dist, idx in zip(distances, indices):
+	# Add second level neighbors
+	for parent_idx in zip(indices):
+		parent_id = recommender.ids[parent_idx]
+		children_sim, children_idx, _, _ = recommender.get_nearest_neighbors(parent_id, k)
+
+		for sim, idx in zip(children_sim, children_idx):
 			child_id = recommender.ids[idx]
-			if new_level <= max_level:
-				graph.add(child_id, parent_id, new_level, dist)
-				if child_id not in visited:
-					to_visit.append((child_id, new_level))
+			graph.add(child_id, parent_id, level=2,  similarity=sim)
 
-	# Remove nodes at max_level that have only one parent
+	# Remove nodes at level 2 that have only one parent (i.e. the do not share parents and
+	# thus do not contribute to the ''clustering'' effect)
 	for node,data in graph.nodes(data=True):
-		if data['level'] == max_level and graph.in_degree(node) == 1:
+		if data['level'] == 2 and graph.in_degree(node) == 1:
 			graph.remove_node(node)
 
-	return center_node_data
+	return neighbors_data
 
 
 class myGraph(nx.DiGraph) :
@@ -91,9 +87,13 @@ class myGraph(nx.DiGraph) :
 		super(myGraph, self).__init__()
 		self.get_data = get_data
 
-	def add(self, node_id, parent_id, level, distance) :
-		""" Add one node to the graph with its data"""
+	def add(self, node_id, parent_id, level, similarity) :
+		"""
+		Add one node to the graph with its data and connect it to its parent
+		if a node id already exist, then do not modify it but add an edge to the new parent
+		"""
 		# Get article data
+		print "graph.add -> %s"%node_id
 		data = self.get_data(node_id)
 		
 		# Add node to the graph
@@ -106,7 +106,7 @@ class myGraph(nx.DiGraph) :
 				parent_id=parent_id)
 
 		# Add a link from the parent to the child
-		self.add_edge(parent_id, node_id, distance=distance)
+		self.add_edge(parent_id, node_id, similarity=similarity)
 
 	def to_dict(self) :
 		""" Converts the graph to dict """
@@ -126,7 +126,7 @@ class myGraph(nx.DiGraph) :
 		links = [{ 
 			'source' : idx[source], 
 			'target' : idx[target], 
-			'value' : val['distance'] 
+			'value' : val['similarity'] 
 			}
 				for source,target,val in self.edges(data=True)]
 		return {'nodes' : nodes, 'links' : links}
