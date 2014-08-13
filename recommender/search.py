@@ -12,9 +12,9 @@ import tables
 import time
 
 import query
+from arxiv.preprocess import SearchVectorizer
 from .exceptions import UnknownIDException
 import util
-from arxiv.preprocess import SearchVectorizer
 from util import mystdout
 
 

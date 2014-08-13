@@ -1,16 +1,10 @@
 import numpy as np
 import scipy.sparse as scsp
 import sqlite3
-import cPickle
 import tables
-
-from sklearn.preprocessing import normalize
-import sklearn.neighbors
 
 import util
 from util import mystdout
-from onlineldavb.myonlineldavb import OnlineLDA
-from arxiv.preprocess import ArticleParser, AuthorVectorizer, recommender_tokenize_author
 from .recommendation_methods import LDABasedRecommendation, AuthorBasedRecommendation
 from .exceptions import UnknownIDException, UnknownAuthorException
 

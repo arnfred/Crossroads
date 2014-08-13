@@ -3,21 +3,19 @@ arXiv crawler using arXiv API. More information at http://arxiv.org/help/api/ind
 """
 
 import urllib
-import calendar
 import datetime
 from dateutil import rrule
 from dateutil.relativedelta import relativedelta
 import time
 import re
-import os
 import sqlalchemy
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import desc
 
 import feedparser
 
 import database
 from database import Article
-from sqlalchemy import desc
 
 BASE_URL = 'http://export.arxiv.org/api/query?' # Base api query url
 WAIT_TIME = 3                                   # number of seconds to wait beetween calls
@@ -120,38 +118,6 @@ class MetadataCrawler(object):
                 n_fetched_tot += n_fetched
                 n_errors_tot += n_errors
                 print "Query[%s, %s]: %d articles fetched (%d in total), %d errors (%d in total)" % (minDate.strftime("%Y-%m-%d"), maxDate.strftime("%Y-%m-%d"), n_fetched, n_fetched_tot, n_errors, n_errors_tot)
-
-
-class FulltextCrawler(object):
-
-    def query(self, datetimeRange=[datetime.datetime(1991,01,01),datetime.datetime.now()]):
-
-        prefix = '/Volumes/MyPassport/data/pdf/'
-        suffix = '.pdf'
-        
-        existing_pdfs = set([e.rstrip('.pdf') for e in os.listdir(prefix) if e.endswith('.pdf')])
-
-        for link, in database.session.query(Article.pdf_link).\
-                        filter(Article.updated_at > datetimeRange[0], Article.updated_at < datetimeRange[1]).\
-                        order_by(desc(Article.updated_at)):
-            filename = link.split('/')[-1]
-            if filename not in existing_pdfs:
-                start_time = time.time()
-                print "Downloading %s..." % filename
-                remote_file = urllib.urlopen(link)
-                data = remote_file.read()
-                if data.startswith('%PDF'):
-                    f = open(prefix+filename+suffix, 'w')
-                    f.write(data)
-                    f.close()
-                else:
-                    print "Error: link %s is not a pdf!" % (prefix+filename+suffix)
-                time.sleep(max(0, WAIT_TIME-time.time()+start_time))
-
-
-
-
-            
 
 
 

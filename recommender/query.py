@@ -1,6 +1,7 @@
 import json
 from itertools import chain
 import numpy as np
+
 import networkx as nx
 
 def center(recommender, paper_id, k) :
@@ -23,6 +24,7 @@ def center(recommender, paper_id, k) :
 		similarity, indices, methods_sim, methods_idx = graph_creation(recommender, paper_id, k)
 	graph_dict = graph.to_dict()
 
+	# Format the detail of the algorithm data and store it as the 'neighbors_data' key
 	neighbors_data = {
 		'LDABasedRecommendation': {'key':'Topic similarity', 'values':[]},
 		'AuthorBasedRecommendation': {'key':'Author similarity', 'values':[]}
