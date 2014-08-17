@@ -1,5 +1,5 @@
-define(["lib/d3.v3.min", "lib/jquery", "ractive", "text!templates/search.html"],
-	   function(d3, $, R, search_template) {
+define(["lib/d3.v3.min", "ractive", "text!templates/search.html"],
+	   function(d3, R, search_template) {
 
 	////////////////////////////////////////
 	//                                    //

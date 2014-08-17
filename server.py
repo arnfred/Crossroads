@@ -6,10 +6,10 @@ from recommender.recommender import ArXivRecommender
 
 # Define pages
 urls = (
-  '/d/(.[a-z0-9\./]*)-([0-9]*)/', 'document',
-  '/', 'index',
-  '/search/(.*)', 'search_query',
-  '/(.[a-z0-9\.]*)/', 'index_id'
+  '/d/(.[a-z0-9\./]*)-([0-9]*)/?', 'document',
+  '/?', 'index',
+  '/search/(.*)/?', 'search_query',
+  '/(.[a-z0-9\.]*)/?', 'index_id'
 )
 render = web.template.render('templates/')
 

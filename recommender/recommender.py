@@ -36,10 +36,16 @@ class ArXivRecommender():
 		categories : iterable
 			Categories of papers to process
 		"""
+		
+		print "#  ArXivRecommender initialization:"
+
+		# Path to Sqlite database
 		self.db_path = db_path
+		
 		# Open hdf5 file
 		self.h5file = tables.open_file(hdf5_path, mode=mode, title="Trailhead - arXiv recommender")
-		
+		print "#  HDF5 file '%s' opened in '%s' mode" % (self.h5file.filename, self.h5file.mode)
+
 		# Initialize stuff
 		if mode is 'w':
 			self.init_miscellaneous(start_date, end_date, categories)
@@ -154,6 +160,7 @@ class ArXivRecommender():
 		self.methods = dict()	# Dict of recommendation methods
 
 	def load_recommendation_methods(self):
+		print "#  Load recommendation methods:"
 		self.methods = dict()	# Dict of recommendation methods
 		# Iterate over the recommendation_methods group to get all recommendation methods
 		# (The recommendations methods corresponding to all these groups will be loaded)
@@ -164,7 +171,7 @@ class ArXivRecommender():
 			obj = globals()[class_name](self.h5file, self.db_path)
 			obj.load_all()
 			self.methods[class_name] = obj
-			print "%s method loaded" % class_name
+			print "#    %s method loaded" % class_name
 
 	# ====================================================================================================
 

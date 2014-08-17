@@ -1,7 +1,6 @@
 import numpy as np
 import scipy.sparse as scsp
 import sqlite3
-import cPickle
 import tables
 
 import sklearn.metrics
@@ -54,7 +53,7 @@ class RecommendationMethodInterface(object):
 			If None, the function returns +inf for all articles not in neighbors_indices
 
 		Returns:
-		similarities : csr sparse matrix
+		similarities : coo sparse matrix
 			similarities of the neighbors
 		indices : array (if k is not None)
 			indices of the neighbors.
