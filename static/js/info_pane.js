@@ -30,8 +30,6 @@ define(["ractive", "lib/underscore", "text!templates/info_pane.html"], function(
 		
 		// When button is pressed
 		info_pane.view.on("submit-click", function(e) {
-			console.log("ok");
-			console.log(info_pane.view.data.id);
 			info_pane.graph.update(info_pane.view.data.id);
 		});
 

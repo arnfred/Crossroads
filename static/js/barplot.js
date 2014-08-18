@@ -39,11 +39,6 @@ define(["lib/d3.v3.min", "lib/nvd3/nv.d3.min"], function(d3) {
 
 			return chart;
 			
-		},function(){
-			  d3.selectAll(".nv-bar").on('click',
-					function(d){
-						barplot.graph.update(d['xlabel']);
-			   });
 		});
 
 	}
