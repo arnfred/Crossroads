@@ -89,6 +89,66 @@ define([
 			force.on("tick", tick);
 			force.start();
 
+			// add legend   
+				var legend = svg.append("g")
+				  .attr("class", "legend")
+				  .attr("x", width - 65)
+				  .attr("y", 25)
+				  .attr("height", 100)
+				  .attr("width", 100);
+
+				legendText = [
+						{
+							"text": "Selected node", 
+							"r": 15, 
+							"fill": d3.rgb(colors(0)), 
+							"strokewidth": 3
+						},
+						{
+							"text": "Root node", 
+							"r": 15, 
+							"fill": d3.rgb(colors(1)), 
+							"strokewidth": 0
+						},
+						{
+							"text": "1st level neighbors", 
+							"r": 12.5, 
+							"fill": d3.rgb(colors(2)), 
+							"strokewidth": 0
+						},
+						{
+							"text": "2nd level neighbors", 
+							"r": 5, 
+							"fill": d3.rgb(colors(3)), 
+							"strokewidth": 0
+						}
+					];
+
+				legend.selectAll('g').data(legendText)
+					.enter()
+					.append('g')
+					.each(function(d, i) {
+						var g = d3.select(this);
+
+						g.append("circle")
+							.attr("cx", width - 175)
+							.attr("cy", i*35 + 30)
+							.attr("r", function(d) { return d.r; })
+							.attr("fill", function(d) { return d.fill; })
+							.attr("stroke-width", function(d) { return d.strokewidth; })
+							.attr("stroke", "black");
+
+						g.append("text")
+							.attr("x", width - 150)
+							.attr("y", i * 35 + 34)
+							.style("fill", "black")
+							.text(function(d) { return d.text; });
+					});
+
+
+
+
+
 			function tick() {
 				link.attr("x1", function(d) { return d.source.x; })
 					.attr("y1", function(d) { return d.source.y; })
@@ -97,6 +157,7 @@ define([
 				node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
 			}
 
+			// What happens when a node is clicked
 			function nodeClick(d) {
 				pane.display(d);							// Display information panel for this node
 				deactivateAll();							// Reset graph (deactivate nodes/links and reset style)
